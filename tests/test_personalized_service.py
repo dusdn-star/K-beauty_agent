@@ -118,6 +118,24 @@ class PersonalizedServiceApiTest(unittest.TestCase):
         self.assertEqual(follow_up.status_code, 200)
         self.assertIn("oil_control", follow_up.text)
 
+    def test_korean_language_response_is_localized(self) -> None:
+        response = self.client.post(
+            "/api/recommend",
+            json={
+                "query": "지성 피부에 맞는 기초 제품을 추천해줘",
+                "limit": 2,
+                "use_openai": False,
+                "language": "ko",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertIn("추천 제품", data["grounded_explanation"])
+        self.assertIn("추천 이유", data["grounded_explanation"])
+        self.assertIn("display_reasons", data["results"][0])
+        self.assertTrue(any("피부" in reason or "성분" in reason for reason in data["results"][0]["display_reasons"]))
+
     def test_admin_endpoints_are_protected(self) -> None:
         unauthorized = self.client.get("/api/admin/metrics")
         self.assertEqual(unauthorized.status_code, 401)

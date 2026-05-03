@@ -4,6 +4,15 @@ from dataclasses import asdict
 from typing import Any
 
 from .knowledge_base import normalize_token
+from .localization import (
+    format_recommendation_text,
+    missing_label,
+    score_component_label,
+    term,
+    translate_caution,
+    translate_evidence,
+    translate_reason,
+)
 from .models import Product, ProductScore, Recommendation, SkinProfile
 
 
@@ -29,16 +38,24 @@ def product_to_dict(product: Product) -> dict[str, Any]:
     }
 
 
-def score_to_dict(score: ProductScore) -> dict[str, Any]:
+def score_to_dict(score: ProductScore, language: str | None = "en") -> dict[str, Any]:
     return {
         "product": product_to_dict(score.product),
         "score": round(score.score, 2),
         "score_components": {key: round(value, 2) for key, value in score.score_components.items()},
+        "display_score_components": {
+            score_component_label(key, language): round(value, 2) for key, value in score.score_components.items()
+        },
         "reasons": score.reasons,
+        "display_reasons": [translate_reason(reason, language) for reason in score.reasons],
         "cautions": score.cautions,
+        "display_cautions": [translate_caution(caution, language) for caution in score.cautions],
         "evidence": score.evidence,
+        "display_evidence": [translate_evidence(evidence, language) for evidence in score.evidence],
         "matched_ingredients": score.matched_ingredients,
+        "display_matched_ingredients": [term(ingredient, language) for ingredient in score.matched_ingredients],
         "missing_data": score.missing_data,
+        "display_missing_data": [missing_label(item, language) for item in score.missing_data],
         "similar_products": [product_to_dict(product) for product in score.similar_products],
     }
 
@@ -54,17 +71,18 @@ def recommendation_to_dict(
     recommendation_id: int | None = None,
     grounded_explanation: str | None = None,
     openai_status: str = "not_used",
+    language: str | None = "en",
 ) -> dict[str, Any]:
     return {
         "recommendation_id": recommendation_id,
         "decision": recommendation.decision,
         "query": recommendation.query,
         "profile": profile_to_public_dict(recommendation.profile),
-        "results": [score_to_dict(item) for item in recommendation.results],
+        "results": [score_to_dict(item, language) for item in recommendation.results],
         "fallback_message": recommendation.fallback_message,
         "review_summary": recommendation.review_summary,
         "guardrails": recommendation.guardrails,
-        "grounded_explanation": grounded_explanation or recommendation.to_text(),
+        "grounded_explanation": grounded_explanation or format_recommendation_text(recommendation, language),
         "openai_status": openai_status,
     }
 

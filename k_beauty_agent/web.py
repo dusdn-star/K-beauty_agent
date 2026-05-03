@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from .agent import KBeautyAgent
 from .config import DEFAULT_JSON_DB, DEFAULT_PRODUCTS_CSV, DEFAULT_REVIEWS_CSV, admin_token, sqlite_path_from_url
 from .llm import HybridExplainer
+from .localization import format_recommendation_text
 from .openai_client import OpenAIResponsesClient
 from .personalization import build_personalization, profile_to_dict
 from .serializers import recommendation_to_dict
@@ -43,6 +44,7 @@ class RecommendRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1200)
     limit: int = Field(3, ge=1, le=8)
     use_openai: bool = True
+    language: Literal["en", "ko"] = "en"
 
 
 class FeedbackRequest(BaseModel):
@@ -226,17 +228,22 @@ def _recommend(payload: RecommendRequest, response: Response, session_id: str, *
         personalization=personalization,
     )
     openai_status = "not_used"
-    explanation = recommendation.to_text()
+    explanation = format_recommendation_text(recommendation, payload.language)
     if payload.use_openai:
         explainer = HybridExplainer(OpenAIResponsesClient(store=store, session_id=session_id))
         try:
-            explanation = explainer.explain(recommendation)
+            explanation = explainer.explain(recommendation, language=payload.language)
             openai_status = "ok"
         except Exception as exc:
             openai_status = "fallback"
             store.log_event("openai_error", {"error": str(exc)[:500]}, session_id=session_id)
 
-    result = recommendation_to_dict(recommendation, grounded_explanation=explanation, openai_status=openai_status)
+    result = recommendation_to_dict(
+        recommendation,
+        grounded_explanation=explanation,
+        openai_status=openai_status,
+        language=payload.language,
+    )
     latency_ms = int((time.perf_counter() - started) * 1000)
     recommendation_id = store.add_recommendation(session_id, payload.query, recommendation.decision, result, latency_ms)
     result["recommendation_id"] = recommendation_id
@@ -254,4 +261,3 @@ def _recommend(payload: RecommendRequest, response: Response, session_id: str, *
     )
     _set_cookie(response, session_id)
     return result
-

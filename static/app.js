@@ -103,6 +103,7 @@ async function submitRecommendation(isFollowUp) {
       query,
       limit: Number(document.querySelector("#limit").value || 3),
       use_openai: document.querySelector("#useOpenAI").checked,
+      language: state.lang,
     }),
   });
   const data = await response.json();
@@ -139,7 +140,8 @@ function renderProfile(profile) {
 
 function renderExplanation(data) {
   const explanation = document.querySelector("#explanation");
-  explanation.textContent = data.grounded_explanation || data.fallback_message || "";
+  const text = data.grounded_explanation || data.fallback_message || "";
+  explanation.innerHTML = renderReadableText(text);
 }
 
 function renderResults(results) {
@@ -158,19 +160,20 @@ function renderResults(results) {
 
 function renderProductCard(item) {
   const product = item.product;
-  const chips = [...(product.concerns || []), ...(item.matched_ingredients || [])]
+  const chips = [...(product.concerns || []), ...(item.display_matched_ingredients || item.matched_ingredients || [])]
     .slice(0, 8)
     .map((chip) => `<span class="chip">${escapeHtml(chip)}</span>`)
     .join("");
   const cautions = item.cautions?.length
-    ? `<p class="cautions"><strong>${copy[state.lang].cautions}:</strong> ${escapeHtml(item.cautions.join("; "))}</p>`
+    ? `<div class="note-list cautions"><strong>${copy[state.lang].cautions}</strong>${renderBullets(item.display_cautions || item.cautions)}</div>`
     : "";
   const evidence = item.evidence?.length
-    ? `<p><strong>${copy[state.lang].evidence}:</strong> ${escapeHtml(item.evidence.join(" "))}</p>`
+    ? `<div class="note-list"><strong>${copy[state.lang].evidence}</strong>${renderBullets(item.display_evidence || item.evidence)}</div>`
     : "";
   const missing = item.missing_data?.length
-    ? `<p class="muted"><strong>${copy[state.lang].missing}:</strong> ${escapeHtml(item.missing_data.join(", "))}</p>`
+    ? `<p class="muted"><strong>${copy[state.lang].missing}:</strong> ${escapeHtml((item.display_missing_data || item.missing_data).join(", "))}</p>`
     : "";
+  const reasons = item.display_reasons || item.reasons || [];
   return `
     <article class="product-card">
       <div class="product-head">
@@ -181,8 +184,11 @@ function renderProductCard(item) {
         <div class="score">${Number(item.score).toFixed(1)}</div>
       </div>
       <div class="chips">${chips}</div>
-      ${renderBars(item.score_components || {})}
-      <p>${escapeHtml((item.reasons || []).join("; "))}</p>
+      ${renderBars(item.display_score_components || item.score_components || {})}
+      <div class="note-list">
+        <strong>${state.lang === "ko" ? "추천 이유" : "Why this fits"}</strong>
+        ${renderBullets(reasons)}
+      </div>
       ${evidence}
       ${cautions}
       ${missing}
@@ -208,6 +214,43 @@ function renderBars(components) {
         </div>`;
     })
     .join("")}</div>`;
+}
+
+function renderReadableText(text) {
+  if (!text) return "";
+  const lines = String(text).split(/\n+/).map((line) => line.trimEnd());
+  const html = [];
+  let list = [];
+  const flushList = () => {
+    if (list.length) {
+      html.push(`<ul>${list.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`);
+      list = [];
+    }
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      continue;
+    }
+    if (trimmed.startsWith("- ")) {
+      list.push(trimmed.slice(2));
+      continue;
+    }
+    flushList();
+    if (/^\d+\.\s/.test(trimmed) || ["추천 제품", "Recommended options:", "리뷰 요약", "Review summary:", "추천 기준", "Guardrails:"].includes(trimmed)) {
+      html.push(`<h3>${escapeHtml(trimmed)}</h3>`);
+    } else {
+      html.push(`<p>${escapeHtml(trimmed)}</p>`);
+    }
+  }
+  flushList();
+  return html.join("");
+}
+
+function renderBullets(items) {
+  if (!items?.length) return "";
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
 function renderSimilar(products) {
