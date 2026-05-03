@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-Beauty Agent</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>K-Beauty Agent</h1>
+        <p data-i18n="subtitle">Ingredient-first Korean beauty recommendations for international shoppers.</p>
+      </div>
+      <div class="top-actions">
+        <div class="language-toggle" role="group" aria-label="Language">
+          <button class="active" data-lang="en">EN</button>
+          <button data-lang="ko">KR</button>
+        </div>
+        <button id="resetSession" class="icon-button" title="Reset session">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel query-panel">
+        <div class="section-head">
+          <h2 data-i18n="queryTitle">Find products</h2>
+          <span class="trust">Rule-first</span>
+        </div>
+        <textarea id="query" rows="5" data-i18n-placeholder="queryPlaceholder">지성 피부에 맞는 기초 제품을 추천해줘</textarea>
+        <div class="controls">
+          <label>
+            <span data-i18n="limit">Results</span>
+            <input id="limit" type="number" min="1" max="8" value="3" />
+          </label>
+          <label class="check">
+            <input id="useOpenAI" type="checkbox" checked />
+            <span data-i18n="openai">Use OpenAI explanation</span>
+          </label>
+        </div>
+        <div class="quick-prompts">
+          <button data-prompt="oily acne prone skin, fragrance-free toner">Oily acne toner</button>
+          <button data-prompt="민감성 피부라 향료 없는 세럼을 추천해줘">Sensitive serum</button>
+          <button data-prompt="pregnant oily skin anti aging serum">Pregnancy-safe</button>
+        </div>
+        <button id="recommend" class="primary">
+          <i data-lucide="sparkles"></i>
+          <span data-i18n="recommend">Recommend</span>
+        </button>
+        <p class="disclaimer" data-i18n="disclaimer">
+          Not sponsored. Cosmetic guidance only, not medical advice.
+        </p>
+      </section>
+
+      <section class="panel context-panel">
+        <div class="section-head">
+          <h2 data-i18n="sessionTitle">Session memory</h2>
+          <span id="sessionHash" class="muted">New</span>
+        </div>
+        <dl id="profileView" class="profile-list"></dl>
+      </section>
+
+      <section class="results-shell">
+        <div id="status" class="status"></div>
+        <div id="explanation" class="explanation"></div>
+        <div id="overallFeedback" class="overall-feedback hidden">
+          <span data-i18n="overallFeedback">Was this recommendation useful?</span>
+          <button data-feedback="liked" class="icon-button"><i data-lucide="thumbs-up"></i></button>
+          <button data-feedback="disliked" class="icon-button"><i data-lucide="thumbs-down"></i></button>
+        </div>
+        <div id="results" class="results"></div>
+        <form id="followUpForm" class="follow-up hidden">
+          <input id="followUpQuery" data-i18n-placeholder="followUpPlaceholder" placeholder="Ask a follow-up, e.g. make it cheaper or gentler" />
+          <button class="primary small" type="submit">
+            <i data-lucide="send"></i>
+            <span data-i18n="askAgain">Ask</span>
+          </button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

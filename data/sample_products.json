@@ -1,0 +1,189 @@
+[
+  {
+    "id": "kr-oily-balance-toner-001",
+    "name": "Sebum Balance Watery Toner",
+    "brand": "K-Beauty Lab A",
+    "category": "toner",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Niacinamide",
+      "Green Tea Extract",
+      "Panthenol",
+      "Glycerin"
+    ],
+    "claims": ["lightweight", "oil control", "fragrance-free"],
+    "suited_skin_types": ["oily", "combination", "sensitive"],
+    "concerns": ["oil_control", "barrier_support", "redness"],
+    "avoid_for": [],
+    "price_usd": 18.0,
+    "rating": 4.4,
+    "review_count": 1200,
+    "reviews": [
+      "Lightweight and absorbs quickly without a greasy finish.",
+      "Helped my oily T-zone feel less shiny by afternoon.",
+      "Gentle toner; no fragrance smell and no stinging for me."
+    ],
+    "evidence_notes": ["Ingredient list has niacinamide, green tea, panthenol, and glycerin."]
+  },
+  {
+    "id": "kr-bha-clarifying-liquid-002",
+    "name": "Pore Clarifying BHA Liquid",
+    "brand": "K-Beauty Lab B",
+    "category": "toner",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Salicylic Acid",
+      "Green Tea Extract",
+      "Glycerin"
+    ],
+    "claims": ["exfoliating", "pore care", "oil control"],
+    "suited_skin_types": ["oily", "combination"],
+    "concerns": ["oil_control", "acne", "clogged_pores", "exfoliation"],
+    "avoid_for": ["sensitive", "salicylate_allergy"],
+    "price_usd": 21.0,
+    "rating": 4.2,
+    "review_count": 840,
+    "reviews": [
+      "Good for blackheads but can be drying if I use it daily.",
+      "My oily skin liked it twice a week.",
+      "Some stinging around my nose at first."
+    ],
+    "evidence_notes": ["Contains salicylic acid, so frequency and sensitivity matter."]
+  },
+  {
+    "id": "kr-barrier-cream-003",
+    "name": "Ceramide Barrier Cream",
+    "brand": "K-Beauty Lab C",
+    "category": "moisturizer",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Glycerin",
+      "Ceramide NP",
+      "Panthenol",
+      "Centella Asiatica"
+    ],
+    "claims": ["barrier support", "hydrating", "fragrance-free"],
+    "suited_skin_types": ["dry", "sensitive", "normal", "combination"],
+    "concerns": ["hydration", "barrier_support", "redness", "dryness"],
+    "avoid_for": [],
+    "price_usd": 24.0,
+    "rating": 4.6,
+    "review_count": 2100,
+    "reviews": [
+      "Very soothing when my skin barrier felt damaged.",
+      "Rich but not too greasy at night.",
+      "Helped with dry patches and redness."
+    ],
+    "evidence_notes": ["Barrier-focused formula with ceramide, panthenol, glycerin, and centella."]
+  },
+  {
+    "id": "kr-oily-gel-cream-004",
+    "name": "Green Tea Oil-Control Gel Cream",
+    "brand": "K-Beauty Lab D",
+    "category": "moisturizer",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Green Tea Extract",
+      "Niacinamide",
+      "Zinc PCA",
+      "Hyaluronic Acid"
+    ],
+    "claims": ["gel texture", "oil control", "light hydration"],
+    "suited_skin_types": ["oily", "combination"],
+    "concerns": ["oil_control", "hydration", "pores"],
+    "avoid_for": [],
+    "price_usd": 20.0,
+    "rating": 4.5,
+    "review_count": 1560,
+    "reviews": [
+      "Lightweight gel that feels hydrating but not greasy.",
+      "My makeup lasted better because it dried down semi-matte.",
+      "Not enough for very dry cheeks in winter."
+    ],
+    "evidence_notes": ["Uses niacinamide, green tea, zinc PCA, and hyaluronic acid for oily but dehydrated skin."]
+  },
+  {
+    "id": "kr-fragrant-glow-serum-005",
+    "name": "Fragrant Glow Serum",
+    "brand": "K-Beauty Lab A",
+    "category": "serum",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Niacinamide",
+      "Fragrance",
+      "Limonene",
+      "Glycerin"
+    ],
+    "claims": ["glow", "brightening"],
+    "suited_skin_types": ["normal", "combination"],
+    "concerns": ["hyperpigmentation"],
+    "avoid_for": ["sensitive", "fragrance_sensitive"],
+    "price_usd": 19.0,
+    "rating": 4.1,
+    "review_count": 670,
+    "reviews": [
+      "Nice glow but the fragrance is strong.",
+      "Felt sticky under sunscreen.",
+      "I stopped using it after some irritation."
+    ],
+    "evidence_notes": ["Contains niacinamide, but fragrance components are a sensitivity concern."]
+  },
+  {
+    "id": "kr-retinol-night-serum-006",
+    "name": "Gentle Retinol Night Serum",
+    "brand": "K-Beauty Lab E",
+    "category": "serum",
+    "country": "Korea",
+    "ingredients": [
+      "Water",
+      "Retinol",
+      "Panthenol",
+      "Glycerin",
+      "Ceramide NP"
+    ],
+    "claims": ["texture", "fine lines"],
+    "suited_skin_types": ["normal", "oily", "combination"],
+    "concerns": ["anti_aging", "texture", "acne"],
+    "avoid_for": ["sensitive"],
+    "price_usd": 28.0,
+    "rating": 4.3,
+    "review_count": 980,
+    "reviews": [
+      "Improved texture but I had to start slowly.",
+      "Can be drying if I skip moisturizer.",
+      "I use sunscreen every morning with this."
+    ],
+    "evidence_notes": ["Retinol requires caution for irritation and pregnancy/nursing."]
+  },
+  {
+    "id": "kr-mineral-sunscreen-007",
+    "name": "Fragrance-Free Daily Mineral Sunscreen",
+    "brand": "K-Beauty Lab F",
+    "category": "sunscreen",
+    "country": "Korea",
+    "ingredients": [
+      "Zinc Oxide",
+      "Glycerin",
+      "Panthenol",
+      "Centella Asiatica"
+    ],
+    "claims": ["spf", "fragrance-free", "daily sunscreen"],
+    "suited_skin_types": ["sensitive", "dry", "normal", "combination"],
+    "concerns": ["barrier_support", "redness"],
+    "avoid_for": [],
+    "price_usd": 23.0,
+    "rating": 4.0,
+    "review_count": 730,
+    "reviews": [
+      "Gentle and calming but leaves a slight cast.",
+      "No stinging around my eyes.",
+      "Works better for me with moisturizer underneath."
+    ],
+    "evidence_notes": ["Sunscreen is foundational for pigmentation, retinoid use, and general photoprotection."]
+  }
+]

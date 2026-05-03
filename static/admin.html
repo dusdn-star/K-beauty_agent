@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-Beauty Agent Admin</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script defer src="/static/admin.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Admin</h1>
+        <p>Service beta monitoring</p>
+      </div>
+    </header>
+    <main class="layout">
+      <section class="panel query-panel">
+        <h2>Access</h2>
+        <input id="token" type="password" placeholder="ADMIN_TOKEN" />
+        <button id="load" class="primary">Load metrics</button>
+        <button id="cleanup" class="primary">Cleanup expired data</button>
+      </section>
+      <section class="results-shell">
+        <div id="metrics" class="results"></div>
+      </section>
+    </main>
+  </body>
+</html>
