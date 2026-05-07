@@ -4,7 +4,7 @@ import csv
 import json
 from pathlib import Path
 
-from .knowledge_base import normalize_token
+from .knowledge_base import find_evidence_for_ingredient, normalize_token
 from .models import Product
 
 
@@ -58,7 +58,9 @@ class ProductDatabase:
                 score += 2.0 * len(product_concerns & concern_set)
             if ingredient_set:
                 product_ingredients = {normalize_token(item) for item in product.ingredients}
-                score += 3.0 * len(product_ingredients & ingredient_set)
+                score += 3.0 * sum(
+                    1 for ingredient in ingredient_set if _ingredient_in_product(ingredient, product_ingredients)
+                )
 
             if not any((query_tokens, category_set, concern_set, ingredient_set)):
                 score = 1.0
@@ -138,3 +140,14 @@ def _load_review_summaries(path: str | Path | None) -> dict[str, dict[str, objec
                 "reviews": tuple(item.strip() for item in reviews if item.strip()),
             }
     return summaries
+
+
+def _ingredient_in_product(ingredient: str, product_ingredients: set[str]) -> bool:
+    wanted_evidence = find_evidence_for_ingredient(ingredient)
+    for product_ingredient in product_ingredients:
+        product_evidence = find_evidence_for_ingredient(product_ingredient)
+        if wanted_evidence and product_evidence and wanted_evidence.name == product_evidence.name:
+            return True
+        if ingredient in product_ingredient or product_ingredient in ingredient:
+            return True
+    return False

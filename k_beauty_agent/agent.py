@@ -67,6 +67,7 @@ class KBeautyAgent:
             query,
             categories=profile.desired_categories,
             concerns=profile.concerns,
+            ingredients=profile.preferred_ingredients,
             limit=50,
         )
         scored = self.recommender.score_products(candidates, profile, personalization=personalization)

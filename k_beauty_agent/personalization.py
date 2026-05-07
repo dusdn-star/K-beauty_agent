@@ -11,6 +11,7 @@ from .skin import analyze_skin_query
 PROFILE_LIST_FIELDS = (
     "concerns",
     "desired_categories",
+    "preferred_ingredients",
     "sensitivities",
     "allergies",
     "avoid_ingredients",
@@ -31,9 +32,11 @@ def profile_from_dict(data: dict[str, Any] | None) -> SkinProfile:
         skin_type=data.get("skin_type"),
         concerns=list(data.get("concerns") or []),
         desired_categories=list(data.get("desired_categories") or []),
+        preferred_ingredients=list(data.get("preferred_ingredients") or []),
         sensitivities=list(data.get("sensitivities") or []),
         allergies=list(data.get("allergies") or []),
         avoid_ingredients=list(data.get("avoid_ingredients") or []),
+        max_price_usd=data.get("max_price_usd"),
         location_or_climate=data.get("location_or_climate"),
         pregnant_or_nursing=data.get("pregnant_or_nursing"),
     )
@@ -48,6 +51,8 @@ def merge_profiles(stored: dict[str, Any] | None, query: str, recent_queries: li
     for profile in (recent_profile, query_profile):
         if profile.skin_type:
             merged.skin_type = profile.skin_type
+        if profile.max_price_usd is not None:
+            merged.max_price_usd = profile.max_price_usd
         if profile.pregnant_or_nursing is not None:
             merged.pregnant_or_nursing = profile.pregnant_or_nursing
         for field in PROFILE_LIST_FIELDS:
@@ -55,8 +60,7 @@ def merge_profiles(stored: dict[str, Any] | None, query: str, recent_queries: li
 
     if query_profile.location_or_climate:
         merged.location_or_climate = query_profile.location_or_climate
-    merged.uncertainty = query_profile.uncertainty
-    merged.follow_up_questions = query_profile.follow_up_questions
+    _refresh_uncertainty(merged)
     return merged
 
 
@@ -94,3 +98,18 @@ def _extend_unique(target: list[str], values: list[str]) -> None:
         if value not in seen:
             target.append(value)
             seen.add(value)
+
+
+def _refresh_uncertainty(profile: SkinProfile) -> None:
+    profile.uncertainty = []
+    profile.follow_up_questions = []
+    if not profile.skin_type:
+        profile.uncertainty.append("skin_type")
+        profile.follow_up_questions.append("What is your skin type: oily, dry, combination, sensitive, or normal?")
+    if not profile.concerns:
+        profile.uncertainty.append("concerns")
+        profile.follow_up_questions.append(
+            "What are your top concerns: oil control, acne, hydration, redness, pigmentation, or aging?"
+        )
+    if profile.skin_type == "sensitive" and not profile.avoid_ingredients:
+        profile.follow_up_questions.append("Do you react to fragrance, essential oils, alcohol, acids, or retinoids?")

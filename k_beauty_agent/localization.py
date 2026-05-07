@@ -63,6 +63,7 @@ COMPONENT_KO = {
 MISSING_KO = {
     "ingredient list": "성분표",
     "rating/review count": "평점/리뷰 수",
+    "price": "가격",
 }
 
 RATIONALE_KO = {
@@ -116,6 +117,29 @@ def translate_reason(reason: str, language: Language | None) -> str:
     if reason.startswith("product DB tags include "):
         concern = reason.removeprefix("product DB tags include ")
         return f"제품 DB 태그가 {term(concern, language)} 고민과 일치합니다."
+    if reason == "claims to be fragrance-free for a lower-irritation routine":
+        return "향료 프리 표시가 있어 저자극 루틴에 더 잘 맞습니다."
+    if reason.startswith("matches gentle-routine signal: "):
+        claims = reason.removeprefix("matches gentle-routine signal: ").split(", ")
+        claim_text = ", ".join(
+            {
+                "fragrance free": "향료 프리",
+                "minimal formula": "단순 처방",
+                "soothing": "진정",
+                "barrier support": "장벽 보조",
+                "low ph": "저 pH",
+            }.get(claim, claim)
+            for claim in claims
+        )
+        return f"순한 루틴 신호와 일치합니다: {claim_text}."
+    if reason == "lower listed price fits the budget follow-up":
+        return "표기 가격이 낮아 예산을 고려한 후속 요청에 맞습니다."
+    if reason.startswith("contains requested ingredient: "):
+        ingredient = reason.removeprefix("contains requested ingredient: ")
+        return f"후속 요청한 성분({term(ingredient, language)})을 포함합니다."
+    if reason.startswith("listed price is within requested maximum: "):
+        price = reason.removeprefix("listed price is within requested maximum: ")
+        return f"표기 가격이 요청한 최대 가격({price}) 이내입니다."
     if " supports " in reason:
         ingredient, rest = reason.split(" supports ", 1)
         concerns = rest.split(" (", 1)[0].split(", ")
@@ -137,6 +161,10 @@ def translate_caution(caution: str, language: Language | None) -> str:
         "contains fragrance-like components, which are a poor fit for sensitive users": "향료 유사 성분은 민감성 피부에 맞지 않을 수 있습니다.",
         "retinoids are not recommended for pregnancy/nursing without clinician approval": "임신/수유 중 레티노이드는 전문가 확인 없이 추천하지 않습니다.",
         "salicylic acid conflicts with salicylate allergy": "살리실산은 살리실레이트 알레르기와 충돌합니다.",
+        "can be less gentle for irritation-prone follow-ups": "자극을 줄이고 싶은 후속 요청에는 덜 순할 수 있습니다.",
+        "does not contain requested ingredient": "후속 요청한 성분을 포함하지 않음",
+        "price is missing, so cannot verify under": "가격 데이터가 없어 최대 가격 조건을 확인할 수 없음:",
+        "excluded because listed price exceeds requested maximum": "표기 가격이 요청한 최대 가격을 초과해 제외:",
         "product DB says avoid for": "제품 DB상 피해야 하는 조건:",
         "no recognized evidence-backed ingredient matched the user concern": "사용자 고민과 직접 매칭되는 근거 성분이 부족합니다.",
     }
@@ -168,6 +196,18 @@ def format_recommendation_text(recommendation: Recommendation, language: Languag
     if recommendation.fallback_message:
         lines.append("현재 DB에서 충분한 근거 성분 매칭을 찾지 못했습니다.")
         lines.append("대안: 향료가 적은 단순 루틴으로 시작하고, 활성 성분은 피부 반응을 확인한 뒤 추가하세요.")
+
+    constraints = []
+    if recommendation.profile.preferred_ingredients:
+        ingredients = ", ".join(term(value, language) for value in recommendation.profile.preferred_ingredients)
+        constraints.append(f"선호 성분: {ingredients}")
+    if recommendation.profile.max_price_usd is not None:
+        constraints.append(f"최대 가격: ${recommendation.profile.max_price_usd:.2f}")
+    if constraints:
+        lines.append("반영된 후속 조건")
+        for constraint in constraints:
+            lines.append(f"- {constraint}")
+        lines.append("")
 
     if recommendation.results:
         lines.append("추천 제품")

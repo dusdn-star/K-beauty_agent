@@ -8,6 +8,7 @@ from pathlib import Path
 
 from k_beauty_agent.agent import KBeautyAgent
 from k_beauty_agent.database import ProductDatabase
+from k_beauty_agent.knowledge_base import find_evidence_for_ingredient
 from k_beauty_agent.personalization import build_personalization, merge_profiles, profile_to_dict
 from k_beauty_agent.recommender import IngredientHybridRecommender
 from k_beauty_agent.storage import SQLiteStore
@@ -25,6 +26,57 @@ class PersonalizedServiceUnitTest(unittest.TestCase):
         self.assertEqual(merged.skin_type, "oily")
         self.assertIn("hydration", merged.concerns)
         self.assertIn("oil_control", merged.concerns)
+
+    def test_follow_up_preference_keeps_context_and_adds_gentle_signals(self) -> None:
+        stored = profile_to_dict(merge_profiles(None, "지성 피부에 맞는 기초 제품을 추천해줘", []))
+        merged = merge_profiles(stored, "그럼 더 순하고 저렴한 걸로 바꿔줘", ["지성 피부에 맞는 기초 제품을 추천해줘"])
+
+        self.assertEqual(merged.skin_type, "oily")
+        self.assertIn("oil_control", merged.concerns)
+        self.assertIn("barrier_support", merged.concerns)
+        self.assertIn("gentle_preference", merged.sensitivities)
+        self.assertIn("budget_preference", merged.sensitivities)
+        self.assertEqual(merged.uncertainty, [])
+
+    def test_follow_up_ingredient_and_price_constraints_are_applied(self) -> None:
+        agent = KBeautyAgent.from_csv(PRODUCTS_CSV, REVIEWS_CSV)
+        first = agent.recommend("지성 피부에 맞는 기초 제품을 추천해줘", limit=3)
+        follow_up = agent.recommend(
+            "나이아신아마이드 성분 들어간 20달러 이하 제품으로 바꿔줘",
+            limit=5,
+            stored_profile=profile_to_dict(first.profile),
+            recent_queries=["지성 피부에 맞는 기초 제품을 추천해줘"],
+        )
+
+        self.assertEqual(follow_up.profile.max_price_usd, 20.0)
+        self.assertIn("niacinamide", follow_up.profile.preferred_ingredients)
+        self.assertTrue(follow_up.results)
+        for item in follow_up.results:
+            self.assertIsNotNone(item.product.price_usd)
+            self.assertLessEqual(item.product.price_usd, 20.0)
+            ingredients = " ".join(item.product.ingredients).lower()
+            self.assertIn("niacinamide", ingredients)
+
+    def test_korean_follow_up_variants_are_understood(self) -> None:
+        stored = profile_to_dict(merge_profiles(None, "지성 피부에 맞는 기초 제품을 추천해줘", []))
+        phrases = [
+            "자극 없는 걸로 바꿔줘",
+            "가격 낮은 제품으로 다시 추천해줘",
+            "비싸지 않고 순한 제품으로 보여줘",
+        ]
+
+        merged = merge_profiles(stored, " ".join(phrases), ["지성 피부에 맞는 기초 제품을 추천해줘"])
+
+        self.assertEqual(merged.skin_type, "oily")
+        self.assertIn("gentle_preference", merged.sensitivities)
+        self.assertIn("budget_preference", merged.sensitivities)
+        self.assertIn("barrier_support", merged.concerns)
+
+    def test_bare_betaine_does_not_match_salicylate(self) -> None:
+        self.assertIsNone(find_evidence_for_ingredient("Betaine"))
+        evidence = find_evidence_for_ingredient("Betaine Salicylate")
+        self.assertIsNotNone(evidence)
+        self.assertEqual(evidence.name, "salicylic acid")
 
     def test_feedback_updates_conservative_personalization(self) -> None:
         db = ProductDatabase.from_csv(PRODUCTS_CSV, REVIEWS_CSV)

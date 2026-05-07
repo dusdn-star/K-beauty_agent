@@ -78,9 +78,11 @@ class SkinProfile:
     skin_type: str | None = None
     concerns: list[str] = field(default_factory=list)
     desired_categories: list[str] = field(default_factory=list)
+    preferred_ingredients: list[str] = field(default_factory=list)
     sensitivities: list[str] = field(default_factory=list)
     allergies: list[str] = field(default_factory=list)
     avoid_ingredients: list[str] = field(default_factory=list)
+    max_price_usd: float | None = None
     location_or_climate: str | None = None
     pregnant_or_nursing: bool | None = None
     uncertainty: list[str] = field(default_factory=list)
@@ -133,6 +135,14 @@ class Recommendation:
 
         if self.fallback_message:
             lines.append(self.fallback_message)
+
+        constraints = []
+        if self.profile.preferred_ingredients:
+            constraints.append(f"preferred ingredients: {', '.join(self.profile.preferred_ingredients)}")
+        if self.profile.max_price_usd is not None:
+            constraints.append(f"max price: ${self.profile.max_price_usd:.2f}")
+        if constraints:
+            lines.append("Applied follow-up constraints: " + "; ".join(constraints))
 
         if self.results:
             lines.append("Recommended options:")

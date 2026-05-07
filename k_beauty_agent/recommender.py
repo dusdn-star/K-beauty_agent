@@ -33,6 +33,7 @@ class IngredientHybridRecommender:
         item = ProductScore(product=product, score=0.0)
         avoid_tokens = {normalize_token(value) for value in profile.avoid_ingredients + profile.allergies}
         product_ingredients = [normalize_token(value) for value in product.ingredients]
+        preferred_ingredients = [normalize_token(value) for value in profile.preferred_ingredients]
 
         if profile.skin_type and profile.skin_type in product.suited_skin_types:
             self._add(item, "skin_fit", 1.5)
@@ -57,6 +58,46 @@ class IngredientHybridRecommender:
                 self._add(item, "penalties", -100.0)
                 item.cautions.append(f"excluded because it contains avoided ingredient/allergy signal: {avoid}")
 
+        for preferred in preferred_ingredients:
+            if not preferred:
+                continue
+            if any(_ingredient_matches(preferred, ingredient) for ingredient in product_ingredients):
+                self._add(item, "ingredient_evidence", 2.0)
+                item.reasons.append(f"contains requested ingredient: {preferred}")
+            else:
+                self._add(item, "penalties", -6.0)
+                item.cautions.append(f"does not contain requested ingredient: {preferred}")
+
+        normalized_claims = {normalize_token(value) for value in product.claims}
+        if "fragrance_sensitive" in profile.sensitivities and "fragrance free" in normalized_claims:
+            self._add(item, "skin_fit", 0.75)
+            item.reasons.append("claims to be fragrance-free for a lower-irritation routine")
+        if "gentle_preference" in profile.sensitivities:
+            gentle_claims = {"fragrance free", "minimal formula", "soothing", "barrier support", "low ph"}
+            matched_claims = sorted(normalized_claims & gentle_claims)
+            if matched_claims:
+                self._add(item, "skin_fit", 0.5)
+                item.reasons.append(f"matches gentle-routine signal: {', '.join(matched_claims)}")
+        if "budget_preference" in profile.sensitivities:
+            if product.price_usd is None:
+                item.missing_data.append("price")
+            else:
+                budget_score = max(0.0, min(1.0, (30.0 - product.price_usd) / 30.0))
+                if budget_score:
+                    self._add(item, "personalization", budget_score)
+                    item.reasons.append("lower listed price fits the budget follow-up")
+        if profile.max_price_usd is not None:
+            if product.price_usd is None:
+                self._add(item, "penalties", -2.0)
+                item.missing_data.append("price")
+                item.cautions.append(f"price is missing, so cannot verify under ${profile.max_price_usd:.2f}")
+            elif product.price_usd <= profile.max_price_usd:
+                self._add(item, "personalization", 1.5)
+                item.reasons.append(f"listed price is within requested maximum: ${profile.max_price_usd:.2f}")
+            else:
+                self._add(item, "penalties", -100.0)
+                item.cautions.append(f"excluded because listed price exceeds requested maximum: ${profile.max_price_usd:.2f}")
+
         for ingredient in product.ingredients:
             evidence = find_evidence_for_ingredient(ingredient)
             if evidence is None:
@@ -79,6 +120,9 @@ class IngredientHybridRecommender:
             if evidence.name == "fragrance" and (profile.skin_type == "sensitive" or "fragrance_sensitive" in profile.sensitivities):
                 self._add(item, "penalties", -3.0)
                 item.cautions.append("contains fragrance-like components, which are a poor fit for sensitive users")
+            if evidence.name in {"retinol", "salicylic acid"} and "gentle_preference" in profile.sensitivities:
+                self._add(item, "penalties", -1.0)
+                item.cautions.append(f"{evidence.name} can be less gentle for irritation-prone follow-ups")
             if evidence.name == "retinol" and profile.pregnant_or_nursing:
                 self._add(item, "penalties", -100.0)
                 item.cautions.append("retinoids are not recommended for pregnancy/nursing without clinician approval")
@@ -178,3 +222,11 @@ class IngredientHybridRecommender:
 def _dedupe(values: list[str]) -> list[str]:
     seen: set[str] = set()
     return [item for item in values if not (item in seen or seen.add(item))]
+
+
+def _ingredient_matches(preferred: str, product_ingredient: str) -> bool:
+    preferred_evidence = find_evidence_for_ingredient(preferred)
+    product_evidence = find_evidence_for_ingredient(product_ingredient)
+    if preferred_evidence and product_evidence:
+        return preferred_evidence.name == product_evidence.name
+    return preferred in product_ingredient or product_ingredient in preferred

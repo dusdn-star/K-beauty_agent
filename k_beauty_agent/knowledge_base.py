@@ -146,6 +146,6 @@ def find_evidence_for_ingredient(ingredient: str) -> IngredientEvidence | None:
     if normalized in index:
         return index[normalized]
     for alias, evidence in index.items():
-        if alias in normalized or normalized in alias:
+        if alias in normalized:
             return evidence
     return None

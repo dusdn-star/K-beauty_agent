@@ -1,18 +1,28 @@
 const state = {
   lang: "en",
   recommendationId: null,
+  profile: {},
 };
 
 const copy = {
   en: {
+    heroEyebrow: "Rule-first beauty advisor",
+    heroTitle: "Ingredient-safe K-beauty recommendations",
     subtitle: "Ingredient-first Korean beauty recommendations for international shoppers.",
+    ads: "ads",
+    evidenceSignal: "ingredient evidence",
+    guardrailSignal: "guardrailed summary",
+    queryEyebrow: "Skin brief",
     queryTitle: "Find products",
     queryPlaceholder: "Tell us your skin type, concerns, allergies, and product category",
     limit: "Results",
     openai: "Use OpenAI explanation",
     recommend: "Recommend",
     disclaimer: "Not sponsored. Cosmetic guidance only, not medical advice.",
+    memoryEyebrow: "Personalization",
     sessionTitle: "Session memory",
+    resultEyebrow: "Recommendation board",
+    resultTitle: "Matched products and rationale",
     overallFeedback: "Was this recommendation useful?",
     followUpPlaceholder: "Ask a follow-up, e.g. make it cheaper or gentler",
     askAgain: "Ask",
@@ -23,14 +33,23 @@ const copy = {
     missing: "Missing data",
   },
   ko: {
+    heroEyebrow: "룰 기반 뷰티 어드바이저",
+    heroTitle: "성분 안전성을 먼저 보는 K-뷰티 추천",
     subtitle: "외국인 구매자를 위한 성분 우선 한국 뷰티 추천",
+    ads: "광고 없음",
+    evidenceSignal: "성분 근거",
+    guardrailSignal: "가드레일 요약",
+    queryEyebrow: "피부 브리프",
     queryTitle: "제품 찾기",
     queryPlaceholder: "피부 타입, 고민, 알레르기, 원하는 제품군을 적어주세요",
     limit: "결과 수",
     openai: "OpenAI 설명 사용",
     recommend: "추천받기",
     disclaimer: "광고가 아닙니다. 화장품 선택 보조이며 의학적 조언이 아닙니다.",
+    memoryEyebrow: "개인화",
     sessionTitle: "세션 기억",
+    resultEyebrow: "추천 보드",
+    resultTitle: "추천 제품과 근거",
     overallFeedback: "이번 추천이 유용했나요?",
     followUpPlaceholder: "후속 질문을 해보세요. 예: 더 저렴하고 순한 제품",
     askAgain: "질문",
@@ -39,6 +58,74 @@ const copy = {
     cautions: "주의점",
     evidence: "근거",
     missing: "누락 데이터",
+  },
+};
+
+const profileLabels = {
+  en: {
+    skin_type: "skin type",
+    concerns: "concerns",
+    desired_categories: "desired categories",
+    preferred_ingredients: "preferred ingredients",
+    sensitivities: "sensitivities",
+    allergies: "allergies",
+    avoid_ingredients: "avoid ingredients",
+    max_price_usd: "max price",
+  },
+  ko: {
+    skin_type: "피부 타입",
+    concerns: "고민",
+    desired_categories: "제품군",
+    preferred_ingredients: "선호 성분",
+    sensitivities: "선호/민감 신호",
+    allergies: "알레르기",
+    avoid_ingredients: "피해야 할 성분",
+    max_price_usd: "최대 가격",
+  },
+};
+
+const profileValues = {
+  ko: {
+    oily: "지성",
+    dry: "건성",
+    combination: "복합성",
+    sensitive: "민감성",
+    normal: "보통",
+    oil_control: "유분 조절",
+    acne: "여드름",
+    clogged_pores: "막힌 모공",
+    hydration: "수분 보습",
+    barrier_support: "피부 장벽",
+    redness: "붉은기 진정",
+    hyperpigmentation: "잡티/색소",
+    anti_aging: "탄력/주름",
+    texture: "피부결",
+    basic: "기초 루틴",
+    cleanser: "클렌저",
+    toner: "토너",
+    serum: "세럼",
+    moisturizer: "보습제",
+    sunscreen: "선크림",
+    niacinamide: "나이아신아마이드",
+    "salicylic acid": "살리실산/BHA",
+    "green tea extract": "녹차 추출물",
+    panthenol: "판테놀",
+    "ceramide np": "세라마이드 NP",
+    glycerin: "글리세린",
+    "hyaluronic acid": "히알루론산",
+    retinol: "레티놀",
+    "azelaic acid": "아젤라익애씨드",
+    "centella asiatica": "병풀/시카",
+    "zinc pca": "징크 PCA",
+    gentle_preference: "순한 제품 선호",
+    fragrance_sensitive: "향료 민감/무향 선호",
+    budget_preference: "저렴한 제품 선호",
+    alcohol_sensitive: "알코올 민감",
+    salicylate_allergy: "살리실레이트 알레르기",
+    snail_allergy: "달팽이 성분 알레르기",
+    fragrance: "향료",
+    parfum: "파르팜",
+    "essential oil": "에센셜 오일",
   },
 };
 
@@ -58,7 +145,7 @@ function bindEvents() {
       document.querySelector("#query").value = button.dataset.prompt;
     });
   });
-  document.querySelector("#recommend").addEventListener("click", () => submitRecommendation(false));
+  document.querySelector("#recommend").addEventListener("click", () => submitRecommendation(Boolean(state.recommendationId)));
   document.querySelector("#followUpForm").addEventListener("submit", (event) => {
     event.preventDefault();
     submitRecommendation(true);
@@ -82,12 +169,14 @@ function applyLanguage(lang) {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
     element.placeholder = copy[lang][element.dataset.i18nPlaceholder] || element.placeholder;
   });
+  renderProfile(state.profile || {});
 }
 
 async function loadSession() {
   const response = await fetch("/api/session");
   const data = await response.json();
   document.querySelector("#sessionHash").textContent = data.session_id_hash || "New";
+  state.profile = data.profile || {};
   renderProfile(data.profile || {});
 }
 
@@ -112,7 +201,8 @@ async function submitRecommendation(isFollowUp) {
     return;
   }
   state.recommendationId = data.recommendation_id;
-  setStatus(`${data.decision} | OpenAI: ${data.openai_status}`);
+  setStatus(formatStatus(data, isFollowUp));
+  state.profile = data.profile || {};
   renderProfile(data.profile || {});
   renderExplanation(data);
   renderResults(data.results || []);
@@ -127,15 +217,56 @@ function setStatus(message) {
   document.querySelector("#status").textContent = message;
 }
 
+function formatStatus(data, isFollowUp) {
+  const parts = [
+    isFollowUp ? (state.lang === "ko" ? "후속 질문 반영" : "Follow-up applied") : data.decision,
+    `OpenAI: ${data.openai_status}`,
+  ];
+  const signals = summarizeProfileSignals(data.profile || {});
+  if (signals) parts.push(signals);
+  return parts.join(" | ");
+}
+
+function summarizeProfileSignals(profile) {
+  const values = [
+    profile.skin_type,
+    ...(profile.concerns || []),
+    ...(profile.preferred_ingredients || []),
+    ...(profile.sensitivities || []),
+    profile.max_price_usd ? `$${Number(profile.max_price_usd).toFixed(2)} 이하` : null,
+  ]
+    .filter(Boolean)
+    .map(formatProfileValue);
+  return [...new Set(values)].slice(0, 6).join(", ");
+}
+
 function renderProfile(profile) {
   const view = document.querySelector("#profileView");
-  const fields = ["skin_type", "concerns", "desired_categories", "sensitivities", "allergies", "avoid_ingredients"];
+  const fields = [
+    "skin_type",
+    "concerns",
+    "desired_categories",
+    "preferred_ingredients",
+    "sensitivities",
+    "allergies",
+    "avoid_ingredients",
+    "max_price_usd",
+  ];
   view.innerHTML = fields
     .map((field) => {
-      const value = Array.isArray(profile[field]) ? profile[field].join(", ") : profile[field];
-      return `<div><dt>${field.replaceAll("_", " ")}</dt><dd>${escapeHtml(value || "-")}</dd></div>`;
+      const value = Array.isArray(profile[field])
+        ? profile[field].map(formatProfileValue).join(", ")
+        : formatProfileValue(profile[field]);
+      const label = profileLabels[state.lang]?.[field] || field.replaceAll("_", " ");
+      return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value || "-")}</dd></div>`;
     })
     .join("");
+}
+
+function formatProfileValue(value) {
+  if (!value) return "";
+  if (typeof value === "number") return `$${value.toFixed(2)}`;
+  return profileValues[state.lang]?.[value] || String(value).replaceAll("_", " ");
 }
 
 function renderExplanation(data) {
