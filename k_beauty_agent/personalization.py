@@ -37,6 +37,8 @@ def profile_from_dict(data: dict[str, Any] | None) -> SkinProfile:
         allergies=list(data.get("allergies") or []),
         avoid_ingredients=list(data.get("avoid_ingredients") or []),
         max_price_usd=data.get("max_price_usd"),
+        max_price_krw=data.get("max_price_krw"),
+        texture_preference=data.get("texture_preference"),
         location_or_climate=data.get("location_or_climate"),
         pregnant_or_nursing=data.get("pregnant_or_nursing"),
     )
@@ -53,6 +55,10 @@ def merge_profiles(stored: dict[str, Any] | None, query: str, recent_queries: li
             merged.skin_type = profile.skin_type
         if profile.max_price_usd is not None:
             merged.max_price_usd = profile.max_price_usd
+        if profile.max_price_krw is not None:
+            merged.max_price_krw = profile.max_price_krw
+        if profile.texture_preference:
+            merged.texture_preference = profile.texture_preference
         if profile.pregnant_or_nursing is not None:
             merged.pregnant_or_nursing = profile.pregnant_or_nursing
         for field in PROFILE_LIST_FIELDS:

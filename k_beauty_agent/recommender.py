@@ -54,7 +54,7 @@ class IngredientHybridRecommender:
         for avoid in avoid_tokens:
             if not avoid:
                 continue
-            if any(avoid in ingredient or ingredient in avoid for ingredient in product_ingredients):
+            if any(_ingredient_matches(avoid, ingredient) or avoid in ingredient or ingredient in avoid for ingredient in product_ingredients):
                 self._add(item, "penalties", -100.0)
                 item.cautions.append(f"excluded because it contains avoided ingredient/allergy signal: {avoid}")
 
@@ -79,13 +79,29 @@ class IngredientHybridRecommender:
                 self._add(item, "skin_fit", 0.5)
                 item.reasons.append(f"matches gentle-routine signal: {', '.join(matched_claims)}")
         if "budget_preference" in profile.sensitivities:
-            if product.price_usd is None:
+            if product.oliveyoung_price_krw is not None:
+                budget_score = max(0.0, min(1.0, (40000.0 - product.oliveyoung_price_krw) / 40000.0))
+                if budget_score:
+                    self._add(item, "personalization", budget_score)
+                    item.reasons.append("lower Olive Young snapshot price fits the budget preference")
+            elif product.price_usd is None:
                 item.missing_data.append("price")
             else:
                 budget_score = max(0.0, min(1.0, (30.0 - product.price_usd) / 30.0))
                 if budget_score:
                     self._add(item, "personalization", budget_score)
                     item.reasons.append("lower listed price fits the budget follow-up")
+        if profile.max_price_krw is not None:
+            if product.oliveyoung_price_krw is None:
+                self._add(item, "penalties", -2.0)
+                item.missing_data.append("oliveyoung price")
+                item.cautions.append(f"Olive Young price is missing, so cannot verify under ₩{profile.max_price_krw:,}")
+            elif product.oliveyoung_price_krw <= profile.max_price_krw:
+                self._add(item, "personalization", 1.5)
+                item.reasons.append(f"Olive Young snapshot price is within requested maximum: ₩{profile.max_price_krw:,}")
+            else:
+                self._add(item, "penalties", -100.0)
+                item.cautions.append(f"excluded because Olive Young snapshot price exceeds requested maximum: ₩{profile.max_price_krw:,}")
         if profile.max_price_usd is not None:
             if product.price_usd is None:
                 self._add(item, "penalties", -2.0)
@@ -97,6 +113,13 @@ class IngredientHybridRecommender:
             else:
                 self._add(item, "penalties", -100.0)
                 item.cautions.append(f"excluded because listed price exceeds requested maximum: ${profile.max_price_usd:.2f}")
+
+        if profile.texture_preference:
+            texture_tags = {normalize_token(value) for value in product.texture_tags + product.claims}
+            wanted_texture = normalize_token(profile.texture_preference)
+            if wanted_texture in texture_tags:
+                self._add(item, "skin_fit", 0.75)
+                item.reasons.append(f"matches requested texture preference: {profile.texture_preference}")
 
         for ingredient in product.ingredients:
             evidence = find_evidence_for_ingredient(ingredient)

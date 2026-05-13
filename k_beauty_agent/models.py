@@ -26,6 +26,7 @@ class Product:
     category: str
     country: str
     ingredients: tuple[str, ...]
+    display_name_ko: str | None = None
     claims: tuple[str, ...] = ()
     suited_skin_types: tuple[str, ...] = ()
     concerns: tuple[str, ...] = ()
@@ -39,6 +40,17 @@ class Product:
     ingredient_source_url: str | None = None
     verified_at: str | None = None
     review_summary: str | None = None
+    review_summary_en: str | None = None
+    image_url: str | None = None
+    image_verified_source: str | None = None
+    image_source_type: str = "none"
+    image_confidence: str | None = None
+    image_view_type: str = "none"
+    oliveyoung_url: str | None = None
+    oliveyoung_price_krw: int | None = None
+    official_url: str | None = None
+    texture_tags: tuple[str, ...] = ()
+    oliveyoung_verified_at: str | None = None
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> "Product":
@@ -53,6 +65,7 @@ class Product:
         return cls(
             id=str(data["id"]),
             name=str(data["name"]),
+            display_name_ko=str(data["display_name_ko"]) if data.get("display_name_ko") else None,
             brand=str(data.get("brand", "Unknown")),
             category=str(data.get("category", "unknown")),
             country=str(data.get("country", "Korea")),
@@ -70,6 +83,17 @@ class Product:
             ingredient_source_url=str(data["ingredient_source_url"]) if data.get("ingredient_source_url") else None,
             verified_at=str(data["verified_at"]) if data.get("verified_at") else None,
             review_summary=str(data["review_summary"]) if data.get("review_summary") else None,
+            review_summary_en=str(data["review_summary_en"]) if data.get("review_summary_en") else None,
+            image_url=str(data["image_url"]) if data.get("image_url") else None,
+            image_verified_source=str(data["image_verified_source"]) if data.get("image_verified_source") else None,
+            image_source_type=str(data["image_source_type"]) if data.get("image_source_type") else "none",
+            image_confidence=str(data["image_confidence"]) if data.get("image_confidence") else None,
+            image_view_type=str(data["image_view_type"]) if data.get("image_view_type") else "none",
+            oliveyoung_url=str(data["oliveyoung_url"]) if data.get("oliveyoung_url") else None,
+            oliveyoung_price_krw=int(float(data["oliveyoung_price_krw"])) if data.get("oliveyoung_price_krw") is not None else None,
+            official_url=str(data["official_url"]) if data.get("official_url") else str(data["source_url"]) if data.get("source_url") else None,
+            texture_tags=tup("texture_tags"),
+            oliveyoung_verified_at=str(data["oliveyoung_verified_at"]) if data.get("oliveyoung_verified_at") else None,
         )
 
 
@@ -83,6 +107,8 @@ class SkinProfile:
     allergies: list[str] = field(default_factory=list)
     avoid_ingredients: list[str] = field(default_factory=list)
     max_price_usd: float | None = None
+    max_price_krw: int | None = None
+    texture_preference: str | None = None
     location_or_climate: str | None = None
     pregnant_or_nursing: bool | None = None
     uncertainty: list[str] = field(default_factory=list)

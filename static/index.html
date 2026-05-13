@@ -1,160 +1,256 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>K-Beauty Agent</title>
+    <title>K-Beauty Recommendation Agent</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
       rel="stylesheet"
       integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
       crossorigin="anonymous"
     />
-    <link rel="stylesheet" href="/static/styles.css?v=20260507-followup-constraints" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260513-routine-compare-actions" />
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script defer src="/static/app.js?v=20260507-followup-constraints"></script>
+    <script defer src="/static/app.js?v=20260513-routine-compare-actions"></script>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <nav class="navbar navbar-expand-lg sticky-top app-nav">
       <div class="container-fluid px-3 px-lg-4">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/#hero" aria-label="K-Beauty Agent home">
           <span class="brand-mark"><i data-lucide="sparkles"></i></span>
           <span>K-Beauty Agent</span>
         </a>
-        <div class="ms-auto d-flex align-items-center gap-2">
-          <div class="language-toggle btn-group" role="group" aria-label="Language">
-            <button class="btn btn-sm active" data-lang="en">EN</button>
-            <button class="btn btn-sm" data-lang="ko">KR</button>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#mainNav"
+          aria-controls="mainNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div id="mainNav" class="collapse navbar-collapse">
+          <div class="navbar-nav ms-lg-auto align-items-lg-center gap-lg-1">
+            <a class="nav-link" href="/#hero">홈</a>
+            <a class="nav-link" href="/#quiz">피부 퀴즈</a>
+            <a class="nav-link" href="/#recommendation">추천</a>
+            <a class="nav-link" href="/compare">제품 비교</a>
+            <a class="nav-link" href="/routine">개인 루틴</a>
+            <div class="language-toggle ms-lg-2" aria-label="Language">
+              <button class="active" type="button" data-lang="ko">KO</button>
+              <button type="button" data-lang="en">EN</button>
+            </div>
+            <button id="resetSession" class="icon-button ms-lg-2" title="세션 초기화" aria-label="세션 초기화">
+              <i data-lucide="rotate-ccw"></i>
+            </button>
           </div>
-          <button id="resetSession" class="icon-button" title="Reset session" aria-label="Reset session">
-            <i data-lucide="rotate-ccw"></i>
-          </button>
         </div>
       </div>
     </nav>
 
-    <main class="container-fluid px-3 px-lg-4 py-4 py-lg-5">
-      <section class="hero-band mb-4">
-        <div class="row g-4 align-items-end">
-          <div class="col-lg-7 col-xl-6">
-            <span class="eyebrow" data-i18n="heroEyebrow">Rule-first beauty advisor</span>
-            <h1 data-i18n="heroTitle">Ingredient-safe K-beauty recommendations</h1>
-            <p data-i18n="subtitle">
-              Ingredient-first Korean beauty recommendations for international shoppers.
-            </p>
-          </div>
-          <div class="col-lg-5 col-xl-6">
-            <div class="signal-grid" aria-label="Service signals">
-              <div>
-                <strong>0</strong>
-                <span data-i18n="ads">ads</span>
-              </div>
-              <div>
-                <strong>DB</strong>
-                <span data-i18n="evidenceSignal">ingredient evidence</span>
-              </div>
-              <div>
-                <strong>LLM</strong>
-                <span data-i18n="guardrailSignal">guardrailed summary</span>
-              </div>
+    <main>
+      <section id="hero" class="hero-section section-pad app-page home-page">
+        <div class="container-fluid px-3 px-lg-4">
+          <div class="hero-copy">
+            <span class="eyebrow">성분과 예산을 함께 보는 K-뷰티 에이전트</span>
+            <h1>K-beauty recommendation agent service</h1>
+            <p>skin type / ingredient / budget based recommendation</p>
+            <div class="hero-cta-wrap">
+              <a class="primary cta hero-main-cta" href="#quiz">
+                <i data-lucide="clipboard-list"></i>
+                <span>Quick skin quiz</span>
+              </a>
+              <span>30초 안에 피부 타입, 알러지, 예산을 반영합니다.</span>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="row g-4 align-items-start">
-        <aside class="col-lg-4 col-xl-3">
-          <section class="card panel query-panel">
-            <div class="card-body">
-              <div class="section-head">
-                <div>
-                  <span class="mini-label" data-i18n="queryEyebrow">Skin brief</span>
-                  <h2 data-i18n="queryTitle">Find products</h2>
-                </div>
-                <span class="trust">Rule-first</span>
+      <section id="quiz" class="section-pad app-page home-page">
+        <div class="container-fluid px-3 px-lg-4">
+          <div class="section-title">
+            <span class="mini-label">피부 퀴즈</span>
+            <h2>피부와 구매 조건을 선택해 주세요</h2>
+          </div>
+          <form id="quizForm" class="quiz-grid">
+            <fieldset class="panel">
+              <legend>피부 타입</legend>
+              <div class="choice-grid" data-choice-group="skinType">
+                <label><input type="checkbox" name="skinType" value="지성" /> 지성</label>
+                <label><input type="checkbox" name="skinType" value="건성" /> 건성</label>
+                <label><input type="checkbox" name="skinType" value="복합성" /> 복합성</label>
+                <label><input type="checkbox" name="skinType" value="민감성" /> 민감성</label>
+                <label><input type="checkbox" name="skinType" value="" data-none /> 선택 안함</label>
               </div>
-              <textarea
-                id="query"
-                class="form-control"
-                rows="6"
-                data-i18n-placeholder="queryPlaceholder"
-                placeholder="Tell us your skin type, concerns, allergies, and product category"
-              >지성 피부에 맞는 기초 제품을 추천해줘</textarea>
-              <div class="controls">
-                <label>
-                  <span data-i18n="limit">Results</span>
-                  <input id="limit" class="form-control" type="number" min="1" max="8" value="3" />
-                </label>
-                <label class="check form-check form-switch">
-                  <input id="useOpenAI" class="form-check-input" type="checkbox" checked />
-                  <span class="form-check-label" data-i18n="openai">Use OpenAI explanation</span>
-                </label>
+            </fieldset>
+
+            <fieldset class="panel wide">
+              <legend>제품 타입</legend>
+              <div class="choice-grid product-type-grid" data-choice-group="productType">
+                <label><input type="checkbox" name="productType" value="클렌저" /> 클렌저/폼</label>
+                <label><input type="checkbox" name="productType" value="클렌징오일" /> 클렌징오일</label>
+                <label><input type="checkbox" name="productType" value="토너" /> 토너/스킨</label>
+                <label><input type="checkbox" name="productType" value="토너패드" /> 토너패드</label>
+                <label><input type="checkbox" name="productType" value="미스트" /> 미스트</label>
+                <label><input type="checkbox" name="productType" value="세럼" /> 세럼/앰플</label>
+                <label><input type="checkbox" name="productType" value="에센스" /> 에센스</label>
+                <label><input type="checkbox" name="productType" value="수분크림" /> 수분크림</label>
+                <label><input type="checkbox" name="productType" value="로션" /> 로션/에멀전</label>
+                <label><input type="checkbox" name="productType" value="선크림" /> 선크림</label>
+                <label><input type="checkbox" name="productType" value="마스크팩" /> 마스크팩</label>
+                <label><input type="checkbox" name="productType" value="아이크림" /> 아이크림</label>
+                <label><input type="checkbox" name="productType" value="립케어" /> 립케어</label>
+                <label><input type="checkbox" name="productType" value="기초 루틴" /> 기초 루틴</label>
+                <label><input type="checkbox" name="productType" value="" data-none /> 선택 안함</label>
               </div>
-              <div class="quick-prompts">
-                <button type="button" data-prompt="oily acne prone skin, fragrance-free toner">Oily acne toner</button>
-                <button type="button" data-prompt="민감성 피부라 향료 없는 세럼을 추천해줘">Sensitive serum</button>
-                <button type="button" data-prompt="pregnant oily skin anti aging serum">Pregnancy-safe</button>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>주요 고민</legend>
+              <div class="choice-grid" data-choice-group="mainConcern">
+                <label><input type="checkbox" name="mainConcern" value="트러블" /> 트러블</label>
+                <label><input type="checkbox" name="mainConcern" value="유분" /> 유분</label>
+                <label><input type="checkbox" name="mainConcern" value="수분" /> 수분</label>
+                <label><input type="checkbox" name="mainConcern" value="장벽" /> 장벽</label>
+                <label><input type="checkbox" name="mainConcern" value="홍조" /> 홍조</label>
+                <label><input type="checkbox" name="mainConcern" value="잡티" /> 잡티</label>
+                <label><input type="checkbox" name="mainConcern" value="모공" /> 모공</label>
+                <label><input type="checkbox" name="mainConcern" value="" data-none /> 선택 안함</label>
               </div>
-              <button id="recommend" class="primary btn" type="button">
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>선호 제형</legend>
+              <div class="choice-grid" data-choice-group="texture">
+                <label><input type="checkbox" name="texture" value="촉촉" /> 촉촉</label>
+                <label><input type="checkbox" name="texture" value="산뜻" /> 산뜻</label>
+                <label><input type="checkbox" name="texture" value="꾸덕" /> 꾸덕</label>
+                <label><input type="checkbox" name="texture" value="젤" /> 젤</label>
+                <label><input type="checkbox" name="texture" value="" data-none /> 선택 안함</label>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel wide">
+              <legend>예산과 알러지</legend>
+              <div class="budget-row">
+                <label for="budget">최대 예산</label>
+                <select id="budget" class="form-select">
+                  <option value="">가격 선택 안함</option>
+                  <option value="10000">₩10,000 이하</option>
+                  <option value="20000">₩20,000 이하</option>
+                  <option value="30000">₩30,000 이하</option>
+                  <option value="40000">₩40,000 이하</option>
+                  <option value="50000">₩50,000 이하</option>
+                  <option value="60000">₩60,000 이하</option>
+                </select>
+                <strong id="budgetValue">₩30,000</strong>
+              </div>
+              <label class="text-field">
+                <span>알러지/피해야 할 성분</span>
+                <input id="allergyInput" class="form-control" placeholder="예: 향료, 달팽이, 알코올, 히알루론산" />
+              </label>
+            </fieldset>
+
+            <div class="quiz-actions wide">
+              <label class="form-check form-switch">
+                <input id="useOpenAI" class="form-check-input" type="checkbox" />
+                <span class="form-check-label">OpenAI 설명 사용</span>
+              </label>
+              <button class="primary" type="submit">
                 <i data-lucide="sparkles"></i>
-                <span data-i18n="recommend">Recommend</span>
+                <span>추천 받기</span>
               </button>
-              <p class="disclaimer" data-i18n="disclaimer">
-                Not sponsored. Cosmetic guidance only, not medical advice.
-              </p>
             </div>
-          </section>
-        </aside>
+          </form>
+        </div>
+      </section>
 
-        <aside class="col-lg-3 col-xl-3">
-          <section class="card panel context-panel">
-            <div class="card-body">
-              <div class="section-head">
-                <div>
-                  <span class="mini-label" data-i18n="memoryEyebrow">Personalization</span>
-                  <h2 data-i18n="sessionTitle">Session memory</h2>
-                </div>
-                <span id="sessionHash" class="muted">New</span>
-              </div>
-              <dl id="profileView" class="profile-list"></dl>
-            </div>
-          </section>
-        </aside>
-
-        <section class="col-lg-5 col-xl-6 results-shell">
-          <div class="workspace-head">
-            <div>
-              <span class="mini-label" data-i18n="resultEyebrow">Recommendation board</span>
-              <h2 data-i18n="resultTitle">Matched products and rationale</h2>
-            </div>
+      <section id="recommendation" class="section-pad soft-band app-page home-page">
+        <div class="container-fluid px-3 px-lg-4">
+          <div class="section-title">
+            <span class="mini-label">추천 결과</span>
+            <h2>추천 제품과 선택 이유</h2>
           </div>
-          <div id="status" class="status"></div>
-          <div id="explanation" class="explanation"></div>
-          <div id="overallFeedback" class="overall-feedback hidden">
-            <span data-i18n="overallFeedback">Was this recommendation useful?</span>
-            <button data-feedback="liked" class="icon-button" type="button" title="Like">
-              <i data-lucide="thumbs-up"></i>
-            </button>
-            <button data-feedback="disliked" class="icon-button" type="button" title="Dislike">
-              <i data-lucide="thumbs-down"></i>
-            </button>
-          </div>
+          <div id="status" class="status">퀴즈를 제출하면 3-5개의 추천 카드가 여기에 표시됩니다.</div>
+          <div id="profileView" class="profile-strip"></div>
           <form id="followUpForm" class="follow-up hidden">
-            <input
-              id="followUpQuery"
-              class="form-control"
-              data-i18n-placeholder="followUpPlaceholder"
-              placeholder="Ask a follow-up, e.g. make it cheaper or gentler"
-            />
-            <button class="primary small btn" type="submit">
+            <input id="followUpQuery" class="form-control" placeholder="후속 조건 추가: 예) 나이아신아마이드 들어간 2만원 이하 제품" />
+            <button class="primary small" type="submit">
               <i data-lucide="send"></i>
-              <span data-i18n="askAgain">Ask</span>
+              <span>반영</span>
             </button>
           </form>
-          <div id="results" class="results"></div>
-        </section>
-      </div>
+          <div id="results" class="product-grid"></div>
+        </div>
+      </section>
+
+      <section id="compare" class="section-pad app-page compare-page">
+        <div class="container-fluid px-3 px-lg-4">
+          <div class="section-title action-title">
+            <div>
+              <span class="mini-label">제품 비교</span>
+              <h2>선택한 제품 비교</h2>
+            </div>
+            <div class="page-actions">
+              <button id="compareSelected" class="secondary" type="button">
+                <i data-lucide="columns-3"></i>
+                <span>선택 제품 비교</span>
+              </button>
+              <button id="compareClearAll" class="secondary hidden" type="button">
+                <span>전체 삭제</span>
+              </button>
+            </div>
+          </div>
+          <div id="compareEmpty" class="empty-panel">비교로 선택한 제품들이 여기에 모입니다.</div>
+          <div id="compareTable" class="compare-table-wrap hidden"></div>
+          <div class="section-title catalog-title">
+            <span class="mini-label">전체 상품</span>
+            <h2>비교할 제품을 선택하세요</h2>
+          </div>
+          <div id="compareCatalog" class="catalog-grid"></div>
+        </div>
+      </section>
+
+      <section id="routine" class="section-pad soft-band app-page routine-page">
+        <div class="container-fluid px-3 px-lg-4">
+          <div class="section-title action-title">
+            <div>
+              <span class="mini-label">개인 루틴</span>
+              <h2>저장한 제품 장바구니</h2>
+            </div>
+            <button id="routineSelectAll" class="secondary routine-select-all hidden" type="button">
+              <span>전체 선택</span>
+            </button>
+          </div>
+          <div id="routineEmpty" class="empty-panel">저장한 제품이 장바구니 형식으로 표시됩니다.</div>
+          <div id="routineList" class="routine-list"></div>
+          <div id="routineTotals" class="routine-total-bar">
+            <div class="total-pill"><span data-total-label>총액</span> <strong id="routineTotal">₩0</strong></div>
+            <div class="total-pill selected-total"><span data-selected-total-label>선택 제품 총액</span> <strong id="routineSelectedTotal">₩0</strong></div>
+          </div>
+          <div class="section-title catalog-title">
+            <span class="mini-label">전체 상품</span>
+            <h2>루틴에 담을 제품을 선택하세요</h2>
+          </div>
+          <div id="routineCatalog" class="catalog-grid"></div>
+        </div>
+      </section>
     </main>
+
+    <div class="modal fade" id="ingredientModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="ingredientModalTitle" class="modal-title fs-5">성분</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+          </div>
+          <div id="ingredientModalBody" class="modal-body"></div>
+        </div>
+      </div>
+    </div>
 
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"

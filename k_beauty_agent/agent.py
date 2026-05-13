@@ -68,10 +68,22 @@ class KBeautyAgent:
             categories=profile.desired_categories,
             concerns=profile.concerns,
             ingredients=profile.preferred_ingredients,
-            limit=50,
+            limit=max(50, len(self.database.products)),
         )
         scored = self.recommender.score_products(candidates, profile, personalization=personalization)
         top = scored[:limit]
+        broadened = False
+
+        if not top and profile.desired_categories:
+            broad_candidates = self.database.search(
+                query,
+                concerns=profile.concerns,
+                ingredients=profile.preferred_ingredients,
+                limit=max(50, len(self.database.products)),
+            )
+            scored = self.recommender.score_products(broad_candidates, profile, personalization=personalization)
+            top = scored[:limit]
+            broadened = bool(top)
 
         if not top:
             profile.follow_up_questions.extend(
@@ -99,6 +111,11 @@ class KBeautyAgent:
             query=query,
             profile=profile,
             results=top,
+            fallback_message=(
+                "No safe exact-category match was found after applying allergy filters, so I broadened the product search."
+                if broadened
+                else None
+            ),
             review_summary=summarize_reviews([item.product for item in top]),
             guardrails=DEFAULT_GUARDRAILS,
         )

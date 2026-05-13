@@ -26,10 +26,10 @@ CONCERN_TERMS = {
 }
 
 CATEGORY_TERMS = {
-    "cleanser": ("cleanser", "cleansing", "폼", "클렌저", "세안"),
-    "toner": ("toner", "토너", "스킨"),
+    "cleanser": ("cleanser", "cleansing", "foam", "oil cleanser", "balm", "폼", "클렌저", "클렌징", "세안", "클렌징오일", "클렌징 오일", "클렌징밤", "클렌징 밤"),
+    "toner": ("toner", "toner pad", "mist", "토너", "스킨", "패드", "토너패드", "토너 패드", "미스트"),
     "serum": ("serum", "ampoule", "essence", "세럼", "앰플", "에센스"),
-    "moisturizer": ("cream", "lotion", "moisturizer", "크림", "로션", "보습제"),
+    "moisturizer": ("lotion", "emulsion", "moisturizer", "water cream", "cream", "수분크림", "수분 크림", "보습크림", "보습 크림", "크림", "에멀전", "로션", "보습제", "아이크림", "아이 크림"),
     "sunscreen": ("sunscreen", "spf", "sun cream", "선크림", "자외선"),
     "basic": ("basic", "routine", "기초", "스킨케어", "루틴"),
 }
@@ -82,6 +82,13 @@ BUDGET_TERMS = (
     "비싸지 않",
 )
 
+TEXTURE_TERMS = {
+    "dewy": ("dewy", "glowy", "촉촉", "촉촉한", "윤광", "광나는"),
+    "lightweight": ("lightweight", "fresh", "watery", "산뜻", "가벼운", "가볍", "워터리", "수분감"),
+    "rich": ("rich", "thick", "cream", "꾸덕", "꾸덕한", "리치", "쫀쫀", "크림"),
+    "gel": ("gel", "gel type", "젤", "젤타입", "젤 타입"),
+}
+
 INGREDIENT_TERMS = {
     "niacinamide": ("niacinamide", "나이아신아마이드", "나이아신", "비타민 b3"),
     "salicylic acid": ("salicylic acid", "bha", "betaine salicylate", "살리실산", "바하", "BHA"),
@@ -95,7 +102,12 @@ INGREDIENT_TERMS = {
     "centella asiatica": ("centella", "centella asiatica", "cica", "병풀", "시카"),
     "zinc pca": ("zinc pca", "zinc", "징크", "아연"),
     "fragrance": ("fragrance", "parfum", "perfume", "향료", "향수"),
+    "alcohol": ("alcohol", "ethanol", "알코올", "에탄올"),
+    "snail": ("snail", "snail secretion filtrate", "달팽이", "스네일"),
+    "tea tree": ("tea tree", "tea tree leaf oil", "티트리"),
 }
+
+AVOID_CONTEXT = ("빼고", "제외", "없는", "없이", "안", "싫", "피하", "알러지", "알레르기", "avoid", "without", "no ")
 
 
 def analyze_skin_query(query: str) -> SkinProfile:
@@ -135,8 +147,11 @@ def analyze_skin_query(query: str) -> SkinProfile:
     if _contains_any(text, BUDGET_TERMS):
         profile.sensitivities.append("budget_preference")
 
+    profile.avoid_ingredients.extend(_extract_avoid_ingredients(text))
     profile.preferred_ingredients.extend(_extract_preferred_ingredients(text))
+    profile.texture_preference = _extract_texture_preference(text)
     profile.max_price_usd = _extract_max_price_usd(text)
+    profile.max_price_krw = _extract_max_price_krw(text)
 
     if _contains_any(text, ("pregnant", "pregnancy", "nursing", "임신", "수유")):
         profile.pregnant_or_nursing = True
@@ -144,11 +159,12 @@ def analyze_skin_query(query: str) -> SkinProfile:
 
     _infer_default_concerns(profile)
 
-    explicit_avoids = re.findall(r"(?:avoid|without|no|빼고|제외)\s+([a-zA-Z가-힣 ]{2,30})", query)
+    explicit_avoids = re.findall(r"(?:avoid|without|no|빼고|제외)\s*([a-zA-Z가-힣 ]{2,30})", query)
+    explicit_avoids.extend(re.findall(r"([a-zA-Z가-힣 ]{2,30})(?:알러지|알레르기|피하고|피해야)", query))
     for item in explicit_avoids:
         cleaned = item.strip(" .,!?:;")
         if cleaned:
-            profile.avoid_ingredients.append(cleaned)
+            profile.avoid_ingredients.extend(_canonical_ingredients(cleaned) or [cleaned])
 
     _dedupe(profile.concerns)
     _dedupe(profile.desired_categories)
@@ -174,7 +190,6 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
 
 
 def _extract_preferred_ingredients(text: str) -> list[str]:
-    avoid_context = ("빼고", "제외", "없는", "없이", "안", "싫", "avoid", "without", "no ")
     values: list[str] = []
     for ingredient, terms in INGREDIENT_TERMS.items():
         for term in terms:
@@ -182,11 +197,34 @@ def _extract_preferred_ingredients(text: str) -> list[str]:
             if normalized_term not in normalize_token(text):
                 continue
             window = _term_window(text, term, radius=18)
-            if any(marker in window for marker in avoid_context):
+            if any(marker in window for marker in AVOID_CONTEXT):
                 continue
             values.append(ingredient)
             break
     return values
+
+
+def _extract_avoid_ingredients(text: str) -> list[str]:
+    values: list[str] = []
+    for ingredient, terms in INGREDIENT_TERMS.items():
+        for term in terms:
+            normalized_term = normalize_token(term)
+            if normalized_term not in normalize_token(text):
+                continue
+            window = _term_window(text, term, radius=24)
+            if any(marker in window for marker in AVOID_CONTEXT):
+                values.append(ingredient)
+                break
+    return values
+
+
+def _canonical_ingredients(text: str) -> list[str]:
+    found: list[str] = []
+    normalized = normalize_token(text)
+    for ingredient, terms in INGREDIENT_TERMS.items():
+        if any(normalize_token(term) in normalized for term in terms):
+            found.append(ingredient)
+    return found
 
 
 def _extract_max_price_usd(text: str) -> float | None:
@@ -195,14 +233,25 @@ def _extract_max_price_usd(text: str) -> float | None:
         value = dollar_match.group(1) or dollar_match.group(2)
         return float(value)
 
+    return None
+
+
+def _extract_max_price_krw(text: str) -> int | None:
     manwon_match = re.search(r"(\d+(?:\.\d+)?)\s*만\s*원", text)
     if manwon_match and _has_price_limit_context(text, manwon_match.group(0)):
-        return round(float(manwon_match.group(1)) * 10000 / 1300, 2)
+        return int(float(manwon_match.group(1)) * 10000)
 
-    won_match = re.search(r"(\d{4,6})\s*원", text)
+    won_match = re.search(r"(\d{4,7})\s*원", text)
     if won_match and _has_price_limit_context(text, won_match.group(0)):
-        return round(float(won_match.group(1)) / 1300, 2)
+        return int(float(won_match.group(1)))
 
+    return None
+
+
+def _extract_texture_preference(text: str) -> str | None:
+    for texture, terms in TEXTURE_TERMS.items():
+        if _contains_any(text, terms):
+            return texture
     return None
 
 

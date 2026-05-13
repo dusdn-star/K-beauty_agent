@@ -4,6 +4,7 @@ from dataclasses import asdict
 from typing import Any
 
 from .knowledge_base import normalize_token
+from .knowledge_base import find_evidence_for_ingredient
 from .localization import (
     format_recommendation_text,
     missing_label,
@@ -20,6 +21,7 @@ def product_to_dict(product: Product) -> dict[str, Any]:
     return {
         "id": product.id,
         "name": product.name,
+        "display_name_ko": product.display_name_ko,
         "brand": product.brand,
         "category": product.category,
         "country": product.country,
@@ -35,6 +37,18 @@ def product_to_dict(product: Product) -> dict[str, Any]:
         "ingredient_source_url": product.ingredient_source_url,
         "verified_at": product.verified_at,
         "review_summary": product.review_summary,
+        "review_summary_en": product.review_summary_en,
+        "image_url": product.image_url,
+        "image_verified_source": product.image_verified_source,
+        "image_source_type": product.image_source_type,
+        "image_confidence": product.image_confidence,
+        "image_view_type": product.image_view_type,
+        "oliveyoung_url": product.oliveyoung_url,
+        "oliveyoung_price_krw": product.oliveyoung_price_krw,
+        "official_url": product.official_url,
+        "texture_tags": list(product.texture_tags),
+        "oliveyoung_verified_at": product.oliveyoung_verified_at,
+        "ingredient_explanations": ingredient_explanations(product.ingredients),
     }
 
 
@@ -63,6 +77,33 @@ def score_to_dict(score: ProductScore, language: str | None = "en") -> dict[str,
 def profile_to_public_dict(profile: SkinProfile) -> dict[str, Any]:
     data = asdict(profile)
     return data
+
+
+def ingredient_explanations(ingredients: tuple[str, ...] | list[str]) -> list[dict[str, Any]]:
+    explanations: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for ingredient in ingredients:
+        evidence = find_evidence_for_ingredient(ingredient)
+        if evidence is None or evidence.name in seen:
+            continue
+        seen.add(evidence.name)
+        explanations.append(
+            {
+                "name": evidence.name,
+                "label": ingredient,
+                "supports": list(evidence.supports),
+                "suitable_for": list(evidence.suitable_for),
+                "cautions": list(evidence.cautions),
+                "evidence_level": evidence.evidence_level,
+                "rationale": evidence.rationale,
+                "display_name_ko": term(evidence.name, "ko"),
+                "display_supports_ko": [term(value, "ko") for value in evidence.supports],
+                "display_suitable_for_ko": [term(value, "ko") for value in evidence.suitable_for],
+                "display_cautions_ko": [translate_caution(value, "ko") for value in evidence.cautions],
+                "display_rationale_ko": translate_evidence(f"{evidence.name}: {evidence.rationale}", "ko").split(": ", 1)[-1],
+            }
+        )
+    return explanations
 
 
 def recommendation_to_dict(

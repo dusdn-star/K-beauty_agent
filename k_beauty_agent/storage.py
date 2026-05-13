@@ -87,10 +87,19 @@ class SQLiteStore:
                     latency_ms INTEGER,
                     created_at INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS selections (
+                    session_id TEXT NOT NULL,
+                    product_id TEXT NOT NULL,
+                    list_type TEXT NOT NULL,
+                    selected INTEGER NOT NULL DEFAULT 1,
+                    updated_at INTEGER NOT NULL,
+                    PRIMARY KEY (session_id, product_id, list_type)
+                );
                 CREATE INDEX IF NOT EXISTS idx_turns_session_created ON conversation_turns(session_id, created_at);
                 CREATE INDEX IF NOT EXISTS idx_feedback_session_created ON feedback(session_id, created_at);
                 CREATE INDEX IF NOT EXISTS idx_recommendations_created ON recommendations(created_at);
                 CREATE INDEX IF NOT EXISTS idx_events_created ON app_events(created_at);
+                CREATE INDEX IF NOT EXISTS idx_selections_session_type ON selections(session_id, list_type);
                 """
             )
 
@@ -191,6 +200,43 @@ class SQLiteStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def set_selection(self, session_id: str, product_id: str, list_type: str, selected: bool) -> None:
+        now = _now()
+        with self.connect() as connection:
+            if selected:
+                connection.execute(
+                    """
+                    INSERT INTO selections(session_id, product_id, list_type, selected, updated_at)
+                    VALUES (?, ?, ?, 1, ?)
+                    ON CONFLICT(session_id, product_id, list_type)
+                    DO UPDATE SET selected = 1, updated_at = excluded.updated_at
+                    """,
+                    (session_id, product_id, list_type, now),
+                )
+            else:
+                connection.execute(
+                    "DELETE FROM selections WHERE session_id = ? AND product_id = ? AND list_type = ?",
+                    (session_id, product_id, list_type),
+                )
+
+    def selections_for_session(self, session_id: str) -> dict[str, list[str]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT product_id, list_type
+                FROM selections
+                WHERE session_id = ? AND selected = 1
+                ORDER BY updated_at ASC
+                """,
+                (session_id,),
+            ).fetchall()
+        selections = {"saved": [], "compare": []}
+        for row in rows:
+            list_type = row["list_type"]
+            if list_type in selections:
+                selections[list_type].append(row["product_id"])
+        return selections
+
     def record_openai_call(self, session_id: str | None, model: str, status: str, latency_ms: int, error: str | None = None) -> None:
         with self.connect() as connection:
             connection.execute(
@@ -221,7 +267,7 @@ class SQLiteStore:
 
     def delete_session(self, session_id: str) -> None:
         with self.connect() as connection:
-            for table in ("sessions", "conversation_turns", "recommendations", "feedback", "openai_calls"):
+            for table in ("sessions", "conversation_turns", "recommendations", "feedback", "openai_calls", "selections"):
                 connection.execute(f"DELETE FROM {table} WHERE session_id = ?", (session_id,))
 
     def cleanup_expired(self, retention_days: int = RETENTION_DAYS) -> int:
@@ -231,6 +277,8 @@ class SQLiteStore:
             for table in ("conversation_turns", "recommendations", "feedback", "openai_calls", "app_events"):
                 cursor = connection.execute(f"DELETE FROM {table} WHERE created_at < ?", (cutoff,))
                 deleted += cursor.rowcount
+            cursor = connection.execute("DELETE FROM selections WHERE updated_at < ?", (cutoff,))
+            deleted += cursor.rowcount
             cursor = connection.execute("DELETE FROM sessions WHERE updated_at < ?", (cutoff,))
             deleted += cursor.rowcount
         return deleted

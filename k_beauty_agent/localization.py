@@ -36,6 +36,13 @@ CATEGORY_KO = {
     "basic": "기초 루틴",
 }
 
+TEXTURE_KO = {
+    "dewy": "촉촉",
+    "lightweight": "산뜻",
+    "rich": "꾸덕/리치",
+    "gel": "젤",
+}
+
 INGREDIENT_KO = {
     "niacinamide": "나이아신아마이드",
     "salicylic acid": "살리실산/BHA",
@@ -64,6 +71,7 @@ MISSING_KO = {
     "ingredient list": "성분표",
     "rating/review count": "평점/리뷰 수",
     "price": "가격",
+    "oliveyoung price": "올리브영 가격",
 }
 
 RATIONALE_KO = {
@@ -90,7 +98,7 @@ def term(value: str, language: Language | None) -> str:
     if not is_korean(language):
         return value
     key = value.lower()
-    return INGREDIENT_KO.get(key) or CONCERN_KO.get(key) or CATEGORY_KO.get(key) or SKIN_KO.get(key) or value
+    return INGREDIENT_KO.get(key) or CONCERN_KO.get(key) or CATEGORY_KO.get(key) or SKIN_KO.get(key) or TEXTURE_KO.get(key) or value
 
 
 def score_component_label(value: str, language: Language | None) -> str:
@@ -134,12 +142,20 @@ def translate_reason(reason: str, language: Language | None) -> str:
         return f"순한 루틴 신호와 일치합니다: {claim_text}."
     if reason == "lower listed price fits the budget follow-up":
         return "표기 가격이 낮아 예산을 고려한 후속 요청에 맞습니다."
+    if reason == "lower Olive Young snapshot price fits the budget preference":
+        return "올리브영 기준 스냅샷 가격이 낮아 예산 선호에 맞습니다."
     if reason.startswith("contains requested ingredient: "):
         ingredient = reason.removeprefix("contains requested ingredient: ")
         return f"후속 요청한 성분({term(ingredient, language)})을 포함합니다."
     if reason.startswith("listed price is within requested maximum: "):
         price = reason.removeprefix("listed price is within requested maximum: ")
         return f"표기 가격이 요청한 최대 가격({price}) 이내입니다."
+    if reason.startswith("Olive Young snapshot price is within requested maximum: "):
+        price = reason.removeprefix("Olive Young snapshot price is within requested maximum: ")
+        return f"올리브영 스냅샷 가격이 요청한 최대 가격({price}) 이내입니다."
+    if reason.startswith("matches requested texture preference: "):
+        texture = reason.removeprefix("matches requested texture preference: ")
+        return f"선호 제형({term(texture, language)})과 일치합니다."
     if " supports " in reason:
         ingredient, rest = reason.split(" supports ", 1)
         concerns = rest.split(" (", 1)[0].split(", ")
@@ -164,7 +180,9 @@ def translate_caution(caution: str, language: Language | None) -> str:
         "can be less gentle for irritation-prone follow-ups": "자극을 줄이고 싶은 후속 요청에는 덜 순할 수 있습니다.",
         "does not contain requested ingredient": "후속 요청한 성분을 포함하지 않음",
         "price is missing, so cannot verify under": "가격 데이터가 없어 최대 가격 조건을 확인할 수 없음:",
+        "Olive Young price is missing, so cannot verify under": "올리브영 가격 데이터가 없어 최대 가격 조건을 확인할 수 없음:",
         "excluded because listed price exceeds requested maximum": "표기 가격이 요청한 최대 가격을 초과해 제외:",
+        "excluded because Olive Young snapshot price exceeds requested maximum": "올리브영 스냅샷 가격이 요청한 최대 가격을 초과해 제외:",
         "product DB says avoid for": "제품 DB상 피해야 하는 조건:",
         "no recognized evidence-backed ingredient matched the user concern": "사용자 고민과 직접 매칭되는 근거 성분이 부족합니다.",
     }
@@ -203,6 +221,10 @@ def format_recommendation_text(recommendation: Recommendation, language: Languag
         constraints.append(f"선호 성분: {ingredients}")
     if recommendation.profile.max_price_usd is not None:
         constraints.append(f"최대 가격: ${recommendation.profile.max_price_usd:.2f}")
+    if recommendation.profile.max_price_krw is not None:
+        constraints.append(f"최대 가격: ₩{recommendation.profile.max_price_krw:,}")
+    if recommendation.profile.texture_preference:
+        constraints.append(f"선호 제형: {term(recommendation.profile.texture_preference, language)}")
     if constraints:
         lines.append("반영된 후속 조건")
         for constraint in constraints:

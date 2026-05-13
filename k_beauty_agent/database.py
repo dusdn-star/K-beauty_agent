@@ -49,10 +49,13 @@ class ProductDatabase:
         for product in self.products:
             score = 0.0
             haystack = self._product_text(product)
+            product_category = normalize_token(product.category)
+            if category_set and "basic" not in category_set and product_category not in category_set:
+                continue
             if query_tokens:
                 score += sum(1.0 for token in query_tokens if token in haystack)
             if category_set:
-                score += 4.0 if normalize_token(product.category) in category_set else 0.0
+                score += 4.0 if product_category in category_set else 0.0
             if concern_set:
                 product_concerns = {normalize_token(item) for item in product.concerns}
                 score += 2.0 * len(product_concerns & concern_set)
@@ -100,8 +103,9 @@ def _coerce_row(row: dict[str, str]) -> dict[str, object]:
         "avoid_for",
         "reviews",
         "evidence_notes",
+        "texture_tags",
     }
-    numeric_fields = {"price_usd", "rating", "review_count"}
+    numeric_fields = {"price_usd", "rating", "review_count", "oliveyoung_price_krw"}
     coerced: dict[str, object] = {}
     for key, value in row.items():
         if value is None:
@@ -137,6 +141,7 @@ def _load_review_summaries(path: str | Path | None) -> dict[str, dict[str, objec
             ]
             summaries[product_id] = {
                 "review_summary": row.get("summary", "").strip(),
+                "review_summary_en": row.get("summary_en", "").strip(),
                 "reviews": tuple(item.strip() for item in reviews if item.strip()),
             }
     return summaries

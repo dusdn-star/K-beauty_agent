@@ -19,7 +19,7 @@ from .llm import HybridExplainer
 from .localization import format_recommendation_text
 from .openai_client import OpenAIResponsesClient
 from .personalization import build_personalization, profile_to_dict
-from .serializers import recommendation_to_dict
+from .serializers import product_to_dict, recommendation_to_dict
 from .storage import SQLiteStore, hash_session
 
 SESSION_COOKIE = "kbeauty_session_id"
@@ -65,6 +65,12 @@ class FeedbackRequest(BaseModel):
         ]
     ] = Field(default_factory=list)
     comment: str | None = Field(default=None, max_length=800)
+
+
+class SelectionRequest(BaseModel):
+    product_id: str = Field(..., min_length=1, max_length=160)
+    list_type: Literal["saved", "compare"]
+    selected: bool = True
 
 
 def _session_id(request: Request) -> str:
@@ -116,6 +122,16 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/compare")
+def compare_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/routine")
+def routine_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
+
 @app.get("/admin")
 def admin_page() -> FileResponse:
     return FileResponse(STATIC_DIR / "admin.html")
@@ -147,16 +163,7 @@ def reset_session(response: Response, session_id: str = Depends(_session_id)) ->
 @app.get("/api/products")
 def products() -> dict[str, object]:
     return {
-        "products": [
-            {
-                "id": product.id,
-                "name": product.name,
-                "brand": product.brand,
-                "category": product.category,
-                "concerns": list(product.concerns),
-            }
-            for product in agent.database.products
-        ]
+        "products": [product_to_dict(product) for product in agent.database.products]
     }
 
 
@@ -191,6 +198,29 @@ def feedback(payload: FeedbackRequest, response: Response, session_id: str = Dep
     )
     _set_cookie(response, session_id)
     return {"ok": True, "feedback_id": feedback_id}
+
+
+@app.get("/api/selections")
+def selections(response: Response, session_id: str = Depends(_session_id)) -> dict[str, object]:
+    store.ensure_session(session_id)
+    result = _selection_payload(session_id)
+    _set_cookie(response, session_id)
+    return result
+
+
+@app.post("/api/selections")
+def update_selection(
+    payload: SelectionRequest,
+    response: Response,
+    session_id: str = Depends(_session_id),
+) -> dict[str, object]:
+    store.ensure_session(session_id)
+    if agent.database.get(payload.product_id) is None:
+        raise HTTPException(status_code=404, detail="Unknown product_id")
+    store.set_selection(session_id, payload.product_id, payload.list_type, payload.selected)
+    result = _selection_payload(session_id)
+    _set_cookie(response, session_id)
+    return result
 
 
 @app.get("/api/admin/metrics")
@@ -261,3 +291,33 @@ def _recommend(payload: RecommendRequest, response: Response, session_id: str, *
     )
     _set_cookie(response, session_id)
     return result
+
+
+def _selection_payload(session_id: str) -> dict[str, object]:
+    selections = store.selections_for_session(session_id)
+    saved_products = _products_for_ids(selections["saved"])
+    compare_products = _products_for_ids(selections["compare"])
+    total_cost_krw = sum(product.oliveyoung_price_krw or 0 for product in saved_products)
+    missing_price_ids = [product.id for product in saved_products if product.oliveyoung_price_krw is None]
+    return {
+        "saved_ids": [product.id for product in saved_products],
+        "compare_ids": [product.id for product in compare_products],
+        "saved_products": [product_to_dict(product) for product in _routine_sort(saved_products)],
+        "compare_products": [product_to_dict(product) for product in compare_products],
+        "total_cost_krw": total_cost_krw,
+        "missing_price_ids": missing_price_ids,
+    }
+
+
+def _products_for_ids(product_ids: list[str]):
+    products = []
+    for product_id in product_ids:
+        product = agent.database.get(product_id)
+        if product is not None:
+            products.append(product)
+    return products
+
+
+def _routine_sort(products):
+    order = {"cleanser": 0, "toner": 1, "serum": 2, "ampoule": 2, "essence": 2, "moisturizer": 3, "sunscreen": 4}
+    return sorted(products, key=lambda product: (order.get(product.category, 20), product.name.lower()))
