@@ -416,6 +416,16 @@ legend {
   background: #e8e5e1;
 }
 
+.link-button.disabled,
+.link-button.disabled:hover {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.52;
+  background: rgba(238, 235, 231, 0.72);
+  border-color: rgba(217, 213, 208, 0.72);
+  color: rgba(92, 86, 80, 0.72);
+}
+
 .icon-button {
   width: 42px;
   padding: 0;
@@ -849,6 +859,15 @@ body[data-page="routine"] .link-button:hover {
   background: #e8e5e1;
   border-color: var(--gray);
   color: var(--ink);
+}
+
+body[data-page="compare"] .link-button.disabled,
+body[data-page="compare"] .link-button.disabled:hover,
+body[data-page="routine"] .link-button.disabled,
+body[data-page="routine"] .link-button.disabled:hover {
+  background: rgba(238, 235, 231, 0.72);
+  border-color: rgba(217, 213, 208, 0.72);
+  color: rgba(92, 86, 80, 0.72);
 }
 
 .step,

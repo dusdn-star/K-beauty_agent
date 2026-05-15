@@ -35,7 +35,7 @@ const uiText = {
     compare: "비교",
     remove: "삭제",
     oliveyoung: "올리브영",
-    official: "공식몰",
+    official: "브랜드 공식몰",
     buyLink: "구매 링크",
     recommendedReason: "추천 이유",
     ingredients: "중요 성분",
@@ -247,6 +247,32 @@ const valueLabels = {
     alcohol: "alcohol",
     snail: "snail",
   },
+};
+
+const koreanOfficialMallByBrand = {
+  "AXIS-Y": "https://www.axis-y.com/",
+  Abib: "https://www.abib.com/",
+  Aestura: "https://www.aestura.com/web/main.do",
+  Anua: "https://www.anua.kr/",
+  "Banila Co": "https://www.banila.com/",
+  "Beauty of Joseon": "https://beautyofjoseon.com/",
+  COSRX: "https://www.cosrx.co.kr/",
+  "Dr.G": "https://www.dr-g.co.kr/main",
+  ETUDE: "https://www.etude.com/brand/beautizen/korean/",
+  Goodal: "https://clubclio.co.kr/",
+  "Haruharu Wonder": "https://haruharuwonder.com/",
+  "I'm From": "https://www.imfrom.co.kr/",
+  Illiyoon: "https://www.illiyoon.com/",
+  Isntree: "https://www.isntree.com/",
+  Mediheal: "https://www.medihealshop.com/",
+  Mixsoon: "https://www.mixsoon.co.kr/",
+  Needly: "https://needly.co.kr/",
+  Numbuzin: "https://www.numbuzin.com/",
+  "Round Lab": "https://roundlab.co.kr/",
+  SKIN1004: "https://www.skin1004.com/",
+  TIRTIR: "https://tirtir.co.kr/",
+  Torriden: "https://www.torriden.com/",
+  "ma:nyo": "https://www.manyo.co.kr/",
 };
 
 function text(key) {
@@ -656,8 +682,8 @@ function renderProductCard(item) {
           <button class="secondary ${isCompare ? "selected" : ""}" type="button" data-select-product data-list-type="compare" data-product-id="${product.id}">
             <i data-lucide="scale"></i><span>${text("compare")}</span>
           </button>
-          <a class="link-button" href="${escapeHtml(product.oliveyoung_url || "#")}" target="_blank" rel="noreferrer">${text("oliveyoung")}</a>
-          <a class="link-button" href="${escapeHtml(product.official_url || product.source_url || "#")}" target="_blank" rel="noreferrer">${text("official")}</a>
+          ${linkButton(product, "oliveyoung", "oliveyoung")}
+          ${linkButton(product, "official", "official")}
         </div>
       </div>
     </article>
@@ -788,7 +814,8 @@ function renderRoutine() {
         </div>
         <div class="routine-actions">
           <button class="secondary" type="button" data-remove-selection data-list-type="saved" data-product-id="${product.id}">${text("remove")}</button>
-          <a class="link-button" href="${escapeHtml(product.oliveyoung_url || "#")}" target="_blank" rel="noreferrer">${text("buyLink")}</a>
+          ${linkButton(product, "oliveyoung", "oliveyoung")}
+          ${linkButton(product, "official", "official")}
         </div>
       </article>`
     )
@@ -969,6 +996,90 @@ function price(product) {
   return text("needPrice");
 }
 
+function linkButton(product, type, labelKey) {
+  const href = productLink(product, type);
+  const disabled = href === "#";
+  const attrs = disabled
+    ? 'href="#" aria-disabled="true" tabindex="-1"'
+    : `href="${escapeHtml(href)}" target="_blank" rel="noreferrer"`;
+  return `<a class="link-button ${disabled ? "disabled" : ""}" ${attrs}>${text(labelKey)}</a>`;
+}
+
+function productLink(product, type) {
+  if (type === "oliveyoung") {
+    if (state.lang === "ko") return product.oliveyoung_url || "#";
+    return globalOliveYoungUrl(product);
+  }
+  if (type === "official") {
+    if (state.lang === "ko") return koreanOfficialMall(product) || officialUrl(product.official_url);
+    return englishUrl(product.official_url, product.source_url, product.image_verified_source);
+  }
+  return "#";
+}
+
+function globalOliveYoungUrl(product) {
+  const query = product?.name || product?.display_name_ko || "";
+  if (!query) return "#";
+  return `https://global.oliveyoung.com/display/search?query=${encodeURIComponent(query)}`;
+}
+
+function officialUrl(url) {
+  return isOfficialUrl(url) ? url : "#";
+}
+
+function koreanOfficialMall(product) {
+  return koreanOfficialMallByBrand[product?.brand] || "";
+}
+
+function koreanSourceUrl(...urls) {
+  return urls.find((url) => isKoreanUrl(url)) || "#";
+}
+
+function englishUrl(...urls) {
+  return urls.find((url) => url && !isKoreanUrl(url)) || "#";
+}
+
+function isKoreanUrl(url) {
+  if (!url) return false;
+  const normalized = String(url).toLowerCase();
+  if (
+    normalized.includes(".kr/") ||
+    normalized.includes(".co.kr") ||
+    normalized.includes("oliveyoung.co.kr") ||
+    normalized.includes("glowpick.co.kr") ||
+    normalized.includes("/kr/") ||
+    normalized.includes("/ko/")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isOfficialUrl(url) {
+  if (!url) return false;
+  const normalized = String(url).toLowerCase();
+  if (
+    normalized.includes("oliveyoung.") ||
+    normalized.includes("glowpick.") ||
+    normalized.includes("hwahae.") ||
+    normalized.includes("incidecoder.") ||
+    normalized.includes("amazon.") ||
+    normalized.includes("ulta.") ||
+    normalized.includes("marksandspencer.")
+  ) {
+    return false;
+  }
+  if (isKoreanUrl(normalized)) return true;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+    return (host === "www.torriden.com" || host === "torriden.com") && path.includes("/goods/");
+  } catch (error) {
+    return false;
+  }
+}
+
 function productImage(product) {
   if (!product.image_url) return "";
   return `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(displayProductName(product))}" loading="lazy" onerror="markImageMissing(this)" />`;
@@ -989,7 +1100,11 @@ function imageSourceBadge(product) {
   };
   const label = product.image_confidence === "verified" ? labels[product.image_source_type] : "";
   if (!label) return "";
-  const source = product.image_verified_source || product.official_url || product.source_url || "#";
+  const source =
+    state.lang === "ko"
+      ? koreanSourceUrl(product.image_verified_source, product.official_url, product.source_url, product.oliveyoung_url)
+      : englishUrl(product.image_verified_source, product.official_url, product.source_url);
+  if (source === "#") return "";
   return `<a class="image-source-badge" href="${escapeHtml(source)}" target="_blank" rel="noreferrer">${label}</a>`;
 }
 
